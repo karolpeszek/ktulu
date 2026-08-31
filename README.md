@@ -7,12 +7,12 @@ Ktulu*). Wszystko dzieje się w przeglądarce — bez serwera i bez konta. Stan 
 ## Uruchomienie
 
 ```bash
-npm install
-npm run dev       # http://localhost:3000
-npm run build     # eksport statyczny do out/ + wygenerowanie service workera
-npm run preview   # podgląd zbudowanej wersji na http://localhost:4173
-npm run lint
-npx tsx scripts/sim.ts   # 200 symulowanych partii — sanity check silnika
+pnpm install
+pnpm run dev       # http://localhost:3000
+pnpm run build     # eksport statyczny do out/ + wygenerowanie service workera
+pnpm run preview   # podgląd zbudowanej wersji na http://localhost:4173
+pnpm run lint
+pnpm dlx tsx scripts/sim.ts   # 200 symulowanych partii — sanity check silnika
 ```
 
 Aplikacja jest w całości statyczna (`output: "export"`), bez backendu — build produkuje zwykłe
@@ -40,7 +40,7 @@ network-first z fallbackiem na cache. Nagłówki w [public/_headers](public/_hea
 Z linii poleceń:
 
 ```bash
-npm run deploy    # build + wrangler pages deploy out --project-name ktulu
+pnpm run deploy   # build + wrangler pages deploy out --project-name ktulu
 ```
 
 Albo przez integrację z repozytorium — w ustawieniach projektu Pages:
@@ -48,7 +48,7 @@ Albo przez integrację z repozytorium — w ustawieniach projektu Pages:
 | Ustawienie | Wartość |
 | --- | --- |
 | Framework preset | None |
-| Build command | `npm run build` |
+| Build command | `pnpm run build` |
 | Build output directory | `out` |
 | Node version | z `.nvmrc` (24) |
 
@@ -56,9 +56,16 @@ Albo przez integrację z repozytorium — w ustawieniach projektu Pages:
 wyniku builda automatycznie (leży w `public/`). Nie ma żadnych funkcji brzegowych ani zmiennych
 środowiskowych do ustawienia.
 
-Projekt używa **npm** — w repozytorium jest wyłącznie `package-lock.json`. Cloudflare wybiera
-menedżera pakietów po pliku blokady, więc `pnpm-lock.yaml` i `yarn.lock` są w `.gitignore`: gdyby
-któryś trafił do repo, build wystartowałby pnpm-em i przerwał się na `pnpm install --frozen-lockfile`.
+Projekt używa **pnpm**. Wersję przybija pole `packageManager` w [package.json](package.json)
+(`pnpm@10.11.1` — dokładnie ta, którą ma builder Cloudflare), więc lokalnie i na Pages instaluje
+dokładnie ten sam pnpm, niezależnie od tego, co jest w systemie. W repozytorium jest wyłącznie
+`pnpm-lock.yaml`; `package-lock.json` i `yarn.lock` są w `.gitignore`, bo Cloudflare wybiera
+menedżera pakietów po pliku blokady i dwa naraz oznaczają losowy wybór.
+
+Nie ma pliku `pnpm-workspace.yaml` — to pojedynczy pakiet, nie monorepo. Gdyby taki plik powstał bez
+pola `packages:`, `pnpm install --frozen-lockfile` przerwie się błędem `packages field missing or
+empty`. Zgodę na pominięcie skryptu instalacyjnego `unrs-resolver` (niepotrzebnego, bo pakiet ma
+gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
 
 ## Co robi
 
