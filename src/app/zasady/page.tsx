@@ -1,6 +1,7 @@
 import { ROLES, TIER_LABEL } from "@/lib/roles";
 import { FACTIONS, FACTION_GOAL, FACTION_LABEL } from "@/lib/types";
 import { Badge, Card } from "@/components/ui";
+import { TABLE, recommendedSettings } from "@/lib/setup";
 
 const COLOR = {
   miasto: "var(--city)",
@@ -61,27 +62,10 @@ const TAJNE = [
   "czy Janosik zamachał ciupagą (dowiadują się dopiero, że wszyscy się cieszą)",
 ];
 
-const SIZES: [number, number, number, number, number][] = [
-  [12, 5, 4, 3, 0],
-  [13, 6, 4, 3, 0],
-  [14, 6, 4, 4, 0],
-  [15, 7, 4, 4, 0],
-  [16, 7, 5, 4, 0],
-  [17, 7, 5, 5, 0],
-  [18, 6, 4, 5, 3],
-  [19, 7, 4, 5, 3],
-  [20, 8, 4, 5, 3],
-  [21, 8, 4, 6, 3],
-  [22, 9, 4, 6, 3],
-  [23, 9, 4, 6, 4],
-  [24, 10, 4, 6, 4],
-  [25, 10, 5, 6, 4],
-  [26, 11, 5, 6, 4],
-  [27, 11, 5, 7, 4],
-  [28, 12, 5, 7, 4],
-  [29, 12, 6, 7, 4],
-  [30, 13, 6, 7, 4],
-];
+/** Wprost z tabeli Xięgi — jedno źródło prawdy, wspólne z kreatorem gry. */
+const SIZES: [number, number, number, number, number][] = Object.entries(TABLE)
+  .map(([n, row]) => [Number(n), ...row] as [number, number, number, number, number])
+  .sort((a, b) => a[0] - b[0]);
 
 export default function RulesPage() {
   return (
@@ -196,12 +180,12 @@ export default function RulesPage() {
         </div>
       </Card>
 
-      <Card title="Proponowane składy (Xięga nie poleca gry powyżej 20 osób)">
+      <Card title="Konfiguracja wg liczby graczy (Xięga nie poleca gry powyżej 20 osób)">
         <div className="overflow-x-auto -mx-4 px-4">
-          <table className="text-[12.5px] border-collapse min-w-[420px]">
+          <table className="text-[12.5px] border-collapse min-w-[560px]">
             <thead>
               <tr>
-                {["Graczy", "Miasto", "Bandyci", "Indianie", "Ufoki"].map((h) => (
+                {["Graczy", "Miasto", "Bandyci", "Indianie", "Ufoki", "Przeszukania", "Statek"].map((h) => (
                   <th key={h} className="text-left label-xs px-3 py-2">
                     {h}
                   </th>
@@ -209,26 +193,35 @@ export default function RulesPage() {
               </tr>
             </thead>
             <tbody>
-              {SIZES.map((row) => (
-                <tr key={row[0]} className="border-t border-[var(--border)]">
-                  {row.map((v, i) => (
-                    <td
-                      key={i}
-                      className="px-3 py-1 font-mono tabular-nums"
-                      style={{
-                        color:
-                          i === 0
-                            ? "var(--text)"
-                            : v === 0
-                              ? "var(--text-faint)"
-                              : [null, COLOR.miasto, COLOR.bandyci, COLOR.indianie, COLOR.ufoki][i]!,
-                      }}
-                    >
-                      {v === 0 && i > 0 ? "—" : v}
+              {SIZES.map((row) => {
+                const r = recommendedSettings(row[0]);
+                return (
+                  <tr key={row[0]} className="border-t border-[var(--border)]">
+                    {row.map((v, i) => (
+                      <td
+                        key={i}
+                        className="px-3 py-1 font-mono tabular-nums"
+                        style={{
+                          color:
+                            i === 0
+                              ? "var(--text)"
+                              : v === 0
+                                ? "var(--text-faint)"
+                                : [null, COLOR.miasto, COLOR.bandyci, COLOR.indianie, COLOR.ufoki][i]!,
+                        }}
+                      >
+                        {v === 0 && i > 0 ? "—" : v}
+                      </td>
+                    ))}
+                    <td className="px-3 py-1 font-mono tabular-nums text-[var(--text-dim)]">
+                      {r.searchCount}
                     </td>
-                  ))}
-                </tr>
-              ))}
+                    <td className="px-3 py-1 font-mono tabular-nums text-[var(--text-dim)]">
+                      noc {r.shipNight}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

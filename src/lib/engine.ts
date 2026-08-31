@@ -17,6 +17,7 @@ export function emptyState(): GameState {
       picked: { miasto: [], bandyci: [], indianie: [], ufoki: [] },
       autofill: true,
       manualCounts: false,
+      manualSettings: false,
     },
     stage: "setup",
     players: [],

@@ -96,3 +96,17 @@ const t2 = makeGame(20);
 t2.night = 2;
 const steps2 = nightSteps(t2).map((x) => x.title);
 console.log("\nkroki nocy 2 (20 graczy):\n " + steps2.join("\n "));
+
+// — kontrola tabeli Xięgi: każda liczba graczy ma spójną konfigurację —
+import { TABLE, recommendationFor } from "../src/lib/setup";
+for (const [n, row] of Object.entries(TABLE)) {
+  const sum = row.reduce((a, b) => a + b, 0);
+  if (sum !== Number(n)) throw new Error(`tabela: ${n} graczy sumuje się do ${sum}`);
+}
+console.log("\ntabela Xięgi: wszystkie wiersze sumują się poprawnie");
+for (const n of [12, 16, 17, 20, 24, 30]) {
+  const r = recommendationFor(n);
+  console.log(
+    `${n} graczy → miasto ${r.counts.miasto}, bandyci ${r.counts.bandyci}, indianie ${r.counts.indianie}, ufoki ${r.counts.ufoki || "—"} | przeszukania ${r.searchCount} | statek noc ${r.shipNight}`
+  );
+}

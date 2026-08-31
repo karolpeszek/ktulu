@@ -78,6 +78,7 @@ export interface SetupConfig {
   picked: Record<Faction, string[]>;
   autofill: boolean;
   manualCounts: boolean;
+  manualSettings: boolean;
 }
 
 export interface GameState {

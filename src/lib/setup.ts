@@ -1,11 +1,11 @@
-import { Faction } from "./types";
+import { Faction, GameState } from "./types";
 import { ROLES } from "./roles";
 import type { Role } from "./types";
 
 export type FactionCounts = Record<Faction, number>;
 
-/** Tabela „Proponowana liczebność i składy frakcji" z Xięgi. */
-const TABLE: Record<number, [number, number, number, number]> = {
+/** Tabela „Proponowana liczebność i składy frakcji” z Xięgi. */
+export const TABLE: Record<number, [number, number, number, number]> = {
   12: [5, 4, 3, 0],
   13: [6, 4, 3, 0],
   14: [6, 4, 4, 0],
@@ -42,6 +42,50 @@ export function suggestedCounts(playerCount: number): FactionCounts {
   const bandyci = Math.max(6, Math.round(playerCount * 0.2));
   const indianie = Math.max(7, Math.round(playerCount * 0.24));
   return { miasto: playerCount - ufoki - bandyci - indianie, bandyci, indianie, ufoki };
+}
+
+export const TABLE_MIN = 12;
+export const TABLE_MAX = 30;
+/** Xięga nie poleca gry w większą liczbę osób. */
+export const RECOMMENDED_MAX = 20;
+
+export function inTable(playerCount: number): boolean {
+  return !!TABLE[playerCount];
+}
+
+/**
+ * Pozostałe ustawienia, które Xięga uzależnia od liczby graczy:
+ * — przeszukiwanych: dwie osoby do szesnastu graczy, trzy przy większej liczbie;
+ * — statek bandytów: trzecia noc (czwarty poranek), a powyżej 16 graczy piąty poranek.
+ */
+export function recommendedSettings(playerCount: number): { searchCount: number; shipNight: number } {
+  return {
+    searchCount: playerCount > 16 ? 3 : 2,
+    shipNight: playerCount > 16 ? 4 : 3,
+  };
+}
+
+/** Podpowiedź Xięgi w całości: skład frakcji + ustawienia zależne od liczby graczy. */
+export function recommendationFor(playerCount: number) {
+  return {
+    counts: suggestedCounts(playerCount),
+    ...recommendedSettings(playerCount),
+    inTable: inTable(playerCount),
+  };
+}
+
+/**
+ * Wpisuje podpowiedzi Xięgi do stanu — z pominięciem tego, co Manitou ustawił ręcznie.
+ * Wołane po każdej zmianie listy graczy.
+ */
+export function syncRecommended(s: GameState) {
+  const n = s.players.length;
+  if (!s.setup.manualCounts) s.setup.counts = suggestedCounts(n);
+  if (!s.setup.manualSettings) {
+    const r = recommendedSettings(n);
+    s.settings.searchCount = r.searchCount;
+    s.settings.shipNight = r.shipNight;
+  }
 }
 
 export function totalOf(c: FactionCounts): number {

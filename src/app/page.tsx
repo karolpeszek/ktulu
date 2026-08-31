@@ -5,9 +5,19 @@ import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/store";
 import { FACTIONS, FACTION_GOAL, FACTION_LABEL, Faction, Player } from "@/lib/types";
 import { ROLES, ROLE_BY_ID, TIER_LABEL, fillerRole, rolesOf } from "@/lib/roles";
-import { buildPool, shuffle, suggestedCounts, totalOf } from "@/lib/setup";
+import {
+  RECOMMENDED_MAX,
+  TABLE_MAX,
+  TABLE_MIN,
+  buildPool,
+  recommendationFor,
+  shuffle,
+  suggestedCounts,
+  syncRecommended,
+  totalOf,
+} from "@/lib/setup";
 import { firstIndex } from "@/lib/resolve";
-import { Badge, Button, Card, Empty, Field, Toggle, cx, inputCls } from "@/components/ui";
+import { Badge, Button, Card, Empty, FACTION_COLOR, Field, Toggle, cx, inputCls } from "@/components/ui";
 import FactionDonut from "@/components/FactionDonut";
 import SeatArc from "@/components/SeatArc";
 
@@ -26,6 +36,9 @@ export default function SetupPage() {
     ? state.setup.counts
     : suggestedCounts(players.length);
   const countsTotal = totalOf(counts);
+  const rec = recommendationFor(players.length);
+  const settingsMatchBook =
+    state.settings.searchCount === rec.searchCount && state.settings.shipNight === rec.shipNight;
   const assigned = players.filter((p) => p.roleId).length;
 
   const pools = useMemo(() => {
@@ -46,6 +59,7 @@ export default function SetupPage() {
         roleId: null,
         alive: true,
       });
+      syncRecommended(s);
     });
   };
 
@@ -57,6 +71,7 @@ export default function SetupPage() {
     update((s) => {
       for (const n of names)
         s.players.push({ id: newId(), name: n, seat: s.players.length, roleId: null, alive: true });
+      syncRecommended(s);
     });
     setBulk("");
     setShowBulk(false);
@@ -208,11 +223,93 @@ export default function SetupPage() {
                           .filter((x) => x.id !== p.id)
                           .sort((a, b) => a.seat - b.seat)
                           .map((x, k) => ({ ...x, seat: k }));
+                        syncRecommended(s);
                       })
                     }
                   />
                 ))}
             </div>
+          </Card>
+
+          <Card
+            title="Podpowiedź Xięgi"
+            right={<Badge color={rec.inTable ? "var(--ok)" : "var(--warn)"}>{`${players.length} graczy`}</Badge>}
+          >
+            {players.length === 0 ? (
+              <p className="text-[12.5px] text-[var(--text-faint)]">
+                Dodaj graczy — Xięga podaje gotowy skład i ustawienia dla każdej liczby uczestników.
+              </p>
+            ) : (
+              <>
+                {!rec.inTable && (
+                  <div className="mb-3 px-2.5 py-2 rounded-md border border-[var(--warn)]/40 bg-[var(--warn-soft)] text-[12px] leading-relaxed">
+                    Tabela Xięgi obejmuje {TABLE_MIN}–{TABLE_MAX} graczy. Dla {players.length} osób
+                    wartości są wyliczone proporcjonalnie — sprawdź je sam.
+                  </div>
+                )}
+                {players.length > RECOMMENDED_MAX && (
+                  <div className="mb-3 px-2.5 py-2 rounded-md border border-[var(--border)] bg-[var(--surface-2)] text-[12px] leading-relaxed text-[var(--text-dim)]">
+                    Xięga nie poleca gry w liczbie większej niż {RECOMMENDED_MAX} osób.
+                  </div>
+                )}
+                <dl className="flex flex-col gap-1">
+                  {FACTIONS.map((f) => (
+                    <div key={f} className="flex items-center gap-2 text-[12.5px]">
+                      <span
+                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ background: FACTION_COLOR[f] }}
+                      />
+                      <dt className="flex-1 text-[var(--text-dim)]">{FACTION_LABEL[f]}</dt>
+                      <dd className="font-mono tabular-nums">
+                        {rec.counts[f] || "—"}
+                        {counts[f] !== rec.counts[f] && (
+                          <span className="ml-1.5 text-[var(--warn)]">→ {counts[f]}</span>
+                        )}
+                      </dd>
+                    </div>
+                  ))}
+                  <div className="h-px bg-[var(--border)] my-1.5" />
+                  <div className="flex items-center gap-2 text-[12.5px]">
+                    <dt className="flex-1 text-[var(--text-dim)]">Przeszukiwanych dziennie</dt>
+                    <dd className="font-mono tabular-nums">
+                      {rec.searchCount}
+                      {state.settings.searchCount !== rec.searchCount && (
+                        <span className="ml-1.5 text-[var(--warn)]">→ {state.settings.searchCount}</span>
+                      )}
+                    </dd>
+                  </div>
+                  <div className="flex items-center gap-2 text-[12.5px]">
+                    <dt className="flex-1 text-[var(--text-dim)]">Statek bandytów</dt>
+                    <dd className="font-mono tabular-nums">
+                      noc {rec.shipNight}
+                      {state.settings.shipNight !== rec.shipNight && (
+                        <span className="ml-1.5 text-[var(--warn)]">→ noc {state.settings.shipNight}</span>
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="mt-2 text-[11px] text-[var(--text-faint)] leading-relaxed">
+                  Dwie osoby do przeszukania do szesnastu graczy, trzy powyżej. Statek odpływa o
+                  poranku po nocy {rec.shipNight} (to {rec.shipNight + 1}. poranek).
+                </p>
+                {(state.setup.manualCounts || !settingsMatchBook) && (
+                  <Button
+                    className="mt-3"
+                    size="sm"
+                    variant="primary"
+                    onClick={() =>
+                      update((s) => {
+                        s.setup.manualCounts = false;
+                        s.setup.manualSettings = false;
+                        syncRecommended(s);
+                      })
+                    }
+                  >
+                    Przywróć ustawienia Xięgi
+                  </Button>
+                )}
+              </>
+            )}
           </Card>
 
           <Card
@@ -297,6 +394,7 @@ export default function SetupPage() {
                   onChange={(e) =>
                     update((s) => {
                       s.settings.searchCount = Math.max(1, Number(e.target.value) || 1);
+                      s.setup.manualSettings = true;
                     })
                   }
                 />
@@ -311,6 +409,7 @@ export default function SetupPage() {
                   onChange={(e) =>
                     update((s) => {
                       s.settings.shipNight = Math.max(1, Number(e.target.value) || 1);
+                      s.setup.manualSettings = true;
                     })
                   }
                 />
