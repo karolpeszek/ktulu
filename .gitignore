@@ -1,7 +1,11 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# dependencies — projekt używa npm; lockfile pnpm/yarn nie trafia do repozytorium,
+# bo Cloudflare Pages wybiera menedżera pakietów po obecności pliku blokady
 /node_modules
+pnpm-lock.yaml
+pnpm-workspace.yaml
+yarn.lock
 /.pnp
 .pnp.*
 .yarn/*

@@ -50,11 +50,15 @@ Albo przez integrację z repozytorium — w ustawieniach projektu Pages:
 | Framework preset | None |
 | Build command | `npm run build` |
 | Build output directory | `out` |
-| Node version | 20 lub nowszy |
+| Node version | z `.nvmrc` (24) |
 
 [wrangler.toml](wrangler.toml) ustawia `pages_build_output_dir = "out"`, a `_headers` trafia do
 wyniku builda automatycznie (leży w `public/`). Nie ma żadnych funkcji brzegowych ani zmiennych
 środowiskowych do ustawienia.
+
+Projekt używa **npm** — w repozytorium jest wyłącznie `package-lock.json`. Cloudflare wybiera
+menedżera pakietów po pliku blokady, więc `pnpm-lock.yaml` i `yarn.lock` są w `.gitignore`: gdyby
+któryś trafił do repo, build wystartowałby pnpm-em i przerwał się na `pnpm install --frozen-lockfile`.
 
 ## Co robi
 
