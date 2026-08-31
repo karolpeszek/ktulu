@@ -39,6 +39,13 @@ npx tsx scripts/sim.ts   # 200 symulowanych partii — sanity check silnika
   służy też jako sposób wskazywania celu,
 - panel korekty ręcznej: Manitou zawsze może nadpisać stan gry i ogłosić dowolne zwycięstwo.
 
+**Karteczki (`/karty`)**
+- karty do rozcięcia dla każdego gracza: frakcja, nazwa roli, pełny opis zdolności i cel frakcji,
+  sześć sztuk (90 × 88 mm) na stronie A4 z liniami cięcia,
+- opcje: imię gracza na karcie (albo bez — do rozdania na ślepo), wymieszanie kolejności,
+  dołączona ściąga Manitou „kto jest kim” na osobnej stronie,
+- „Drukuj / zapisz PDF” otwiera okno drukowania przeglądarki — wybierz „Zapisz jako PDF”.
+
 **Zasady (`/zasady`)** — pełna ściąga: cele frakcji, kolejność nocy, jawność, opisy wszystkich kart,
 tabela składów.
 

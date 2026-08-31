@@ -47,6 +47,13 @@ export default function GamePage() {
         <Card
           title="Skład rady"
           right={
+            <div className="flex items-center gap-2">
+            <Link
+              href="/karty"
+              className="h-7 px-2.5 inline-flex items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[12px]"
+            >
+              Karteczki
+            </Link>
             <Button
               size="sm"
               variant="danger"
@@ -56,6 +63,7 @@ export default function GamePage() {
             >
               Nowa gra
             </Button>
+            </div>
           }
         >
           <Roster state={state} hideRoles={hideRoles} />

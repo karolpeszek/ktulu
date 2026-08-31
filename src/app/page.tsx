@@ -516,6 +516,13 @@ export default function SetupPage() {
             title="Przydział ról"
             right={
               <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  disabled={assigned === 0}
+                  onClick={() => router.push("/karty")}
+                >
+                  Karteczki do druku
+                </Button>
                 <Button size="sm" onClick={clearRoles}>
                   Wyczyść
                 </Button>

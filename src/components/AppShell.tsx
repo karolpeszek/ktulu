@@ -8,6 +8,7 @@ import { cx, Badge } from "./ui";
 const NAV = [
   { href: "/", label: "Przygotowanie" },
   { href: "/gra", label: "Rozgrywka" },
+  { href: "/karty", label: "Karteczki" },
   { href: "/zasady", label: "Zasady" },
 ];
 
@@ -26,7 +27,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="h-12 shrink-0 sticky top-0 z-30 bg-[var(--surface)] border-b border-[var(--border)] flex items-center px-4 gap-6">
+      <header className="app-header h-12 shrink-0 sticky top-0 z-30 bg-[var(--surface)] border-b border-[var(--border)] flex items-center px-4 gap-6">
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <span className="w-5 h-5 rounded-[5px] bg-[var(--accent)] grid place-items-center text-[11px] font-bold text-[var(--accent-text)]">
             K

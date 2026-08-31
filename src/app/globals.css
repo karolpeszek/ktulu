@@ -168,3 +168,175 @@ body {
 .anim-joy {
   animation: ktulu-joy 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
+
+/* ── karteczki do rozcięcia ─────────────────────────────────────────────── */
+
+.print-sheet {
+  background: #ffffff;
+  color: #14161a;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8mm;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 90mm);
+  justify-content: center;
+}
+
+.cut-card {
+  width: 90mm;
+  height: 88mm;
+  box-sizing: border-box;
+  padding: 6mm 6mm 5mm;
+  border: 1px dashed #b9bec7;
+  border-top: 2.5px solid #999;
+  display: flex;
+  flex-direction: column;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  overflow: hidden;
+}
+
+.cut-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4mm;
+}
+
+.cut-card .faction {
+  font-size: 8.5pt;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.cut-card .player {
+  font-size: 9.5pt;
+  color: #555c66;
+  font-weight: 600;
+  max-width: 40mm;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cut-card .role {
+  font-size: 15pt;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 1.5mm 0 2mm;
+  color: #14161a;
+}
+
+.cut-card .desc {
+  font-size: 8.6pt;
+  line-height: 1.45;
+  color: #2b2f36;
+  flex: 1;
+  overflow: hidden;
+}
+
+.cut-card footer {
+  border-top: 1px solid #e2e5ea;
+  padding-top: 2mm;
+  margin-top: 2mm;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8mm;
+}
+
+.cut-card .goal {
+  font-size: 8pt;
+  color: #4a5058;
+  line-height: 1.35;
+}
+
+.cut-card .night {
+  font-size: 7.2pt;
+  color: #7a828c;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cheat {
+  break-before: page;
+  page-break-before: always;
+  padding-top: 6mm;
+}
+
+.cheat h2 {
+  font-size: 13pt;
+  font-weight: 700;
+  margin-bottom: 4mm;
+}
+
+.cheat table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+}
+
+.cheat th {
+  text-align: left;
+  font-size: 7.5pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a828c;
+  padding: 1.5mm 3mm 1.5mm 0;
+  border-bottom: 1px solid #cfd4db;
+}
+
+.cheat td {
+  padding: 1.4mm 3mm 1.4mm 0;
+  border-bottom: 1px solid #eceff3;
+}
+
+.cheat .hint {
+  margin-top: 4mm;
+  font-size: 8.5pt;
+  color: #4a5058;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #14161a !important;
+  }
+
+  .no-print,
+  header.app-header {
+    display: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print-sheet {
+    border: 0;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  .cards-grid {
+    justify-content: start;
+  }
+
+  .cut-card,
+  .cheat td,
+  .cheat th {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
