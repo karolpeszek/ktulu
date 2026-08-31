@@ -8,11 +8,53 @@ Ktulu*). Wszystko dzieje się w przeglądarce — bez serwera i bez konta. Stan 
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
-npm run build    # produkcja
+npm run dev       # http://localhost:3000
+npm run build     # eksport statyczny do out/ + wygenerowanie service workera
+npm run preview   # podgląd zbudowanej wersji na http://localhost:4173
 npm run lint
 npx tsx scripts/sim.ts   # 200 symulowanych partii — sanity check silnika
 ```
+
+Aplikacja jest w całości statyczna (`output: "export"`), bez backendu — build produkuje zwykłe
+pliki w `out/`.
+
+## Offline i aktualizacje
+
+Po pierwszym otwarciu service worker zapisuje w cache całą aplikację, więc kolejne uruchomienia
+działają bez internetu — przydatne, gdy gra toczy się przy ognisku poza zasięgiem. Stan rozgrywki
+i tak siedzi w `localStorage`.
+
+Service worker (`out/sw.js`) jest generowany po buildzie przez [scripts/gen-sw.mjs](scripts/gen-sw.mjs):
+skrypt skanuje `out/`, wypisuje listę plików do zapisania w cache i stempluje ją hashem zawartości.
+Każda zmiana w buildzie daje nowy hash, więc przeglądarka wykrywa nową wersję. Wtedy — po
+załadowaniu w tle — w rogu pojawia się „Dostępna nowa wersja” z przyciskami *Odśwież teraz* i
+*Później*; nic nie przeładowuje się samo w środku prowadzonej nocy. Aplikacja sprawdza aktualizacje
+przy starcie, po powrocie do karty i co godzinę.
+
+Zasoby z hashem w nazwie (`/_next/static/*`) serwowane są z cache, reszta strategią
+network-first z fallbackiem na cache. Nagłówki w [public/_headers](public/_headers) pilnują, żeby
+`sw.js`, manifest i `version.json` nigdy nie były cache’owane przez CDN.
+
+## Wdrożenie na Cloudflare Pages
+
+Z linii poleceń:
+
+```bash
+npm run deploy    # build + wrangler pages deploy out --project-name ktulu
+```
+
+Albo przez integrację z repozytorium — w ustawieniach projektu Pages:
+
+| Ustawienie | Wartość |
+| --- | --- |
+| Framework preset | None |
+| Build command | `npm run build` |
+| Build output directory | `out` |
+| Node version | 20 lub nowszy |
+
+[wrangler.toml](wrangler.toml) ustawia `pages_build_output_dir = "out"`, a `_headers` trafia do
+wyniku builda automatycznie (leży w `public/`). Nie ma żadnych funkcji brzegowych ani zmiennych
+środowiskowych do ustawienia.
 
 ## Co robi
 

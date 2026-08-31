@@ -1,0 +1,17 @@
+{
+  "name": "Ktulu — pulpit Manitou",
+  "short_name": "Ktulu",
+  "description": "Prowadzenie rozgrywki w Ktulu: przydział ról, kroki nocy, głosowania i warunki zwycięstwa.",
+  "lang": "pl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f5f7",
+  "theme_color": "#006fff",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

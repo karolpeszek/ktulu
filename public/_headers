@@ -1,0 +1,19 @@
+# Service worker i manifest muszą być zawsze świeże, inaczej aktualizacja
+# aplikacji nie dotarłaby do zainstalowanych kopii.
+/sw.js
+  Cache-Control: no-cache, must-revalidate
+  Service-Worker-Allowed: /
+
+/manifest.webmanifest
+  Cache-Control: no-cache, must-revalidate
+
+/version.json
+  Cache-Control: no-cache, must-revalidate
+
+# Zasoby z hashem w nazwie są niezmienne.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

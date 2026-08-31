@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "next build && node scripts/gen-sw.mjs",
+    "preview": "npx --yes serve out -l 4173",
+    "deploy": "npm run build && npx --yes wrangler pages deploy out --project-name ktulu",
+    "icons": "node scripts/gen-icons.mjs",
     "lint": "eslint"
   },
   "dependencies": {
