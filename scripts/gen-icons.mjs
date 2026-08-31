@@ -91,8 +91,29 @@ function render(size) {
   return png(S, S, buf);
 }
 
+/** ICO może opakować gotowy obraz PNG — akceptuje to każda współczesna przeglądarka. */
+function ico(pngBuffer, size) {
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0); // zarezerwowane
+  header.writeUInt16LE(1, 2); // typ: ikona
+  header.writeUInt16LE(1, 4); // liczba obrazów
+  const entry = Buffer.alloc(16);
+  entry[0] = size < 256 ? size : 0; // szerokość (0 = 256)
+  entry[1] = size < 256 ? size : 0; // wysokość
+  entry[2] = 0; // paleta
+  entry[3] = 0; // zarezerwowane
+  entry.writeUInt16LE(1, 4); // płaszczyzny
+  entry.writeUInt16LE(32, 6); // bity na piksel
+  entry.writeUInt32LE(pngBuffer.length, 8); // rozmiar danych obrazu
+  entry.writeUInt32LE(header.length + entry.length, 12);
+  return Buffer.concat([header, entry, pngBuffer]);
+}
+
 for (const size of [192, 512]) {
   const out = `public/icon-${size}.png`;
   writeFileSync(out, render(size));
   console.log("zapisano", out);
 }
+
+writeFileSync("src/app/favicon.ico", ico(render(64), 64));
+console.log("zapisano src/app/favicon.ico");
