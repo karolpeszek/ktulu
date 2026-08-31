@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build && node scripts/gen-sw.mjs",
     "preview": "pnpm dlx serve out -l 4173",
-    "deploy": "pnpm run build && pnpm dlx wrangler pages deploy out --project-name ktulu",
+    "deploy": "pnpm run build && pnpm dlx wrangler deploy",
     "icons": "node scripts/gen-icons.mjs",
     "lint": "eslint"
   },

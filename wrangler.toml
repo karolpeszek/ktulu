@@ -1,4 +1,12 @@
-# Cloudflare Pages — projekt w pełni statyczny, bez funkcji brzegowych.
+# Cloudflare Workers Builds — statyczna aplikacja bez kodu Workera.
+# Cały ruch obsługuje warstwa Static Assets, dlatego nie ma pola `main`.
 name = "ktulu"
-pages_build_output_dir = "out"
 compatibility_date = "2026-08-31"
+
+[assets]
+directory = "./out"
+# `trailingSlash: true` w Next daje /gra/index.html — auto-trailing-slash
+# serwuje to zarówno pod /gra, jak i /gra/.
+html_handling = "auto-trailing-slash"
+# Nieznany adres dostaje wyeksportowaną stronę 404 zamiast gołego błędu.
+not_found_handling = "404-page"

@@ -35,29 +35,40 @@ Zasoby z hashem w nazwie (`/_next/static/*`) serwowane są z cache, reszta strat
 network-first z fallbackiem na cache. Nagłówki w [public/_headers](public/_headers) pilnują, żeby
 `sw.js`, manifest i `version.json` nigdy nie były cache’owane przez CDN.
 
-## Wdrożenie na Cloudflare Pages
+## Wdrożenie na Cloudflare
+
+Projekt jest wdrażany jako **Worker ze statycznymi zasobami** (Workers Builds) — aplikacja nie ma
+kodu serwerowego, więc [wrangler.toml](wrangler.toml) nie deklaruje pola `main`, tylko sekcję
+`[assets]` wskazującą katalog `out`.
 
 Z linii poleceń:
 
 ```bash
-pnpm run deploy   # build + wrangler pages deploy out --project-name ktulu
+pnpm run deploy   # build + wrangler deploy
 ```
 
-Albo przez integrację z repozytorium — w ustawieniach projektu Pages:
+Ustawienia projektu połączonego z repozytorium:
 
 | Ustawienie | Wartość |
 | --- | --- |
-| Framework preset | None |
 | Build command | `pnpm run build` |
-| Build output directory | `out` |
+| Deploy command | `npx wrangler deploy` |
 | Node version | z `.nvmrc` (24) |
 
-[wrangler.toml](wrangler.toml) ustawia `pages_build_output_dir = "out"`, a `_headers` trafia do
-wyniku builda automatycznie (leży w `public/`). Nie ma żadnych funkcji brzegowych ani zmiennych
-środowiskowych do ustawienia.
+`html_handling = "auto-trailing-slash"` dopasowuje się do `trailingSlash: true` w Next (trasa `/gra`
+i `/gra/` trafiają w ten sam `out/gra/index.html`), a `not_found_handling = "404-page"` serwuje
+wyeksportowaną stronę 404. Plik `_headers` leży w `public/`, więc trafia do `out/` razem z buildem.
+
+Gdyby projekt miał jednak być klasycznym **Pages**, wrangler.toml musi zamiast sekcji `[assets]`
+zawierać `pages_build_output_dir = "out"`, a komendą wdrożenia jest
+`wrangler pages deploy out --project-name ktulu`. Obie konfiguracje wykluczają się nawzajem:
+`wrangler deploy` na konfiguracji Pages kończy się błędem `Missing entry-point to Worker script or
+to assets directory`.
+
+## Zależności
 
 Projekt używa **pnpm**. Wersję przybija pole `packageManager` w [package.json](package.json)
-(`pnpm@10.11.1` — dokładnie ta, którą ma builder Cloudflare), więc lokalnie i na Pages instaluje
+(`pnpm@10.11.1` — dokładnie ta, którą ma builder Cloudflare), więc lokalnie i w CI instaluje
 dokładnie ten sam pnpm, niezależnie od tego, co jest w systemie. W repozytorium jest wyłącznie
 `pnpm-lock.yaml`; `package-lock.json` i `yarn.lock` są w `.gitignore`, bo Cloudflare wybiera
 menedżera pakietów po pliku blokady i dwa naraz oznaczają losowy wybór.
