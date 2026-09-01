@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   description:
     "Aplikacja do prowadzenia rozgrywki w Ktulu — przydział ról, kroki nocy, głosowania i warunki zwycięstwa.",
   manifest: "/manifest.webmanifest",
+  // Sam Disallow w robots.txt blokuje tylko pobieranie strony; dopiero noindex
+  // wypycha ewentualny adres z wyników wyszukiwania.
+  robots: { index: false, follow: false },
   applicationName: "Ktulu",
   appleWebApp: { capable: true, title: "Ktulu", statusBarStyle: "default" },
   icons: {

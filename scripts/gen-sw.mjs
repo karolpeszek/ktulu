@@ -14,7 +14,7 @@ import { join, posix, relative, sep } from "node:path";
 const OUT = "out";
 
 /** Plików tych nie ma sensu trzymać w cache aplikacji. */
-const SKIP = [/^_headers$/, /^sw\.js$/, /^version\.json$/, /\.map$/, /^404(\.html$|\/)/];
+const SKIP = [/^_headers$/, /^robots\.txt$/, /^sw\.js$/, /^version\.json$/, /\.map$/, /^404(\.html$|\/)/];
 
 function walk(dir) {
   const out = [];
