@@ -40,8 +40,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           dangerouslySetInnerHTML={{
             __html:
-              'try{var t=JSON.parse(localStorage.getItem("ktulu.ui.prefs.v1")||"{}").theme;' +
-              'if(t&&t!=="system")document.documentElement.dataset.theme=t}catch(e){}',
+              'try{var p=JSON.parse(localStorage.getItem("ktulu.ui.prefs.v1")||"{}");' +
+              'var r=document.documentElement;' +
+              'if(p.theme&&p.theme!=="system")r.dataset.theme=p.theme;' +
+              'if(p.density&&p.density!=="normal")r.dataset.density=p.density}catch(e){}',
           }}
         />
         <PrefsProvider>

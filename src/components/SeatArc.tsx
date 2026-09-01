@@ -43,7 +43,7 @@ export default function SeatArc({
   const [dragFrom, setDragFrom] = React.useState<number | null>(null);
   const [dragTo, setDragTo] = React.useState<number | null>(null);
   const [hover, setHover] = React.useState<{ i: number; anchor: TipAnchor } | null>(null);
-  const { tipSide, safeMode } = usePrefs();
+  const { tipSide, safeMode, density } = usePrefs();
   const [flipped, setFlipped] = React.useState(false);
   // Tryb bezpieczny zasłania karty w każdym widoku, nie tylko na liście.
   const hidden = hideRoles || safeMode;
@@ -55,7 +55,8 @@ export default function SeatArc({
   const cxPt = W / 2;
   const cyPt = R + (compact ? 60 : 74);
   const H = cyPt + (compact ? 38 : 46);
-  const nodeR = n > 22 ? 13 : n > 15 ? 15 : 17;
+  // Na dotyku żeton musi być większym celem — palec nie trafia w 13 px.
+  const nodeR = (n > 22 ? 13 : n > 15 ? 15 : 17) + (density === "touch" ? 5 : 0);
 
   if (n === 0) {
     return (

@@ -83,7 +83,8 @@ gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
 **Przygotowanie (`/`)**
 - lista graczy (pojedynczo lub wklejona hurtem), kolejność = kolejność w kręgu — istotna dla
   detektora ufoków; kolejność zmienia się przeciąganiem gracza po łuku diagramu, przeciąganiem za
-  uchwyt przy liście albo strzałkami. Przeciąganie działa na zdarzeniach wskaźnika, więc obsługuje
+  uchwyt przy liście albo strzałkami; w obu widokach reszta rozsuwa się na podgląd układu
+  po upuszczeniu, z animacją. Przeciąganie działa na zdarzeniach wskaźnika, więc obsługuje
   mysz, dotyk i Apple Pencil; sterowanie jest widoczne bez najeżdżania tam, gdzie nie ma `hover`,
 - skład frakcji z tabeli Xięgi dla 12–30 graczy (3 lub 4 frakcje), z ręczną korektą,
 - wybór kart: ręcznie albo automatycznie (kluczowe → tradycyjne → opcjonalne → kontrowersyjne,
@@ -117,7 +118,9 @@ gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
   dołączona ściąga Manitou „kto jest kim” na osobnej stronie,
 - „Drukuj / zapisz PDF” otwiera okno drukowania przeglądarki — wybierz „Zapisz jako PDF”.
 
-**Ustawienia (`/ustawienia`)** — motyw (auto / jasny / ciemny) i ręka trzymająca rysik.
+**Ustawienia (`/ustawienia`)** — motyw (auto / jasny / ciemny), rozmiar elementów (zwykły / dotyk)
+i ręka trzymająca rysik. Tryb dotykowy powiększa cele kliknięcia i pokazuje od razu sterowanie,
+które normalnie wychodzi po najechaniu.
 Podpowiedzi stają obok wskazanego elementu po stronie przeciwnej do ręki; gdy tam nie ma miejsca,
 przechodzą na drugą stronę, a przy krawędzi ekranu — pod element.
 

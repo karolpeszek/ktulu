@@ -18,7 +18,7 @@ export default function Roster({
 
   return (
     <div className="-mx-4 -my-4">
-      <table className="w-full text-[12.5px] border-collapse">
+      <table className="ui-table w-full text-[12.5px] border-collapse">
         <thead>
           <tr className="text-[var(--text-faint)]">
             <th className="text-left font-medium px-3 py-2 w-8 label-xs">#</th>

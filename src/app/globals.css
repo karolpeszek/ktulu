@@ -408,17 +408,100 @@ body {
   }
 }
 
-/* Płynne przestawianie graczy w kręgu — pozycje żetonów i podpisów są
-   transformacjami, więc zmiana miejsca przesuwa je po ekranie zamiast
+/* Płynne przestawianie graczy — w kręgu i na liście imion. Pozycje są
+   transformacjami, więc zmiana miejsca przesuwa element po ekranie zamiast
    przeskakiwać. Przy `prefers-reduced-motion` ruch znika. */
 .seat-node,
-.seat-label {
+.seat-label,
+.reorder-move {
   transition: transform 260ms cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .seat-node,
-  .seat-label {
+  .seat-label,
+  .reorder-move {
     transition: none;
   }
+}
+
+/* ── tryb dotykowy ───────────────────────────────────────────────────────────
+   Palec potrzebuje większych celów niż kursor czy rysik. Zamiast skalować całą
+   stronę (`zoom` rozjeżdża współrzędne dymków liczone względem okna), rosną
+   konkretne elementy, w które się celuje. */
+
+:root[data-density="touch"] body {
+  font-size: 15px;
+}
+
+:root[data-density="touch"] .ui-btn {
+  min-height: 44px;
+  padding-inline: 1rem;
+  font-size: 14px;
+}
+
+:root[data-density="touch"] .ui-btn.h-7 {
+  min-height: 38px;
+}
+
+:root[data-density="touch"] .ui-input {
+  min-height: 44px;
+  font-size: 14px;
+}
+
+:root[data-density="touch"] .ui-header {
+  height: 60px;
+}
+
+:root[data-density="touch"] .ui-navlink {
+  padding-inline: 1rem;
+  font-size: 14px;
+}
+
+:root[data-density="touch"] .ui-row {
+  height: 44px;
+}
+
+:root[data-density="touch"] .ui-grip,
+:root[data-density="touch"] .ui-iconbtn {
+  width: 40px;
+  height: 40px;
+  font-size: 17px;
+}
+
+/* Sterowanie wierszem jest zawsze widoczne — na dotyku nie ma najeżdżania. */
+:root[data-density="touch"] .ui-grip,
+:root[data-density="touch"] .ui-iconbtn {
+  opacity: 1 !important;
+}
+
+:root[data-density="touch"] .ui-toggle {
+  font-size: 14px;
+  min-height: 44px;
+}
+
+:root[data-density="touch"] .ui-toggle-track {
+  width: 46px;
+  height: 26px;
+}
+
+:root[data-density="touch"] .ui-toggle-knob {
+  width: 20px;
+  height: 20px;
+  top: 2px;
+}
+
+:root[data-density="touch"] .ui-toggle-knob.left-\[18px\] {
+  left: 23px;
+}
+
+:root[data-density="touch"] .ui-table td,
+:root[data-density="touch"] .ui-table th {
+  padding-block: 0.6rem;
+  font-size: 13.5px;
+}
+
+:root[data-density="touch"] select {
+  min-height: 40px;
+  font-size: 14px;
 }

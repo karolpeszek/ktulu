@@ -45,7 +45,29 @@ export default function SetupPage() {
   const [showBulk, setShowBulk] = useState(false);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const [rowPitch, setRowPitch] = useState(36);
   const listRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Miejsce, jakie wiersz zajmie po upuszczeniu. W trakcie przeciągania reszta
+   * listy rozsuwa się na podgląd — dokładnie tak, jak żetony w kręgu rady.
+   */
+  const previewSlot = (i: number): number => {
+    if (dragFrom === null || dragOver === null || dragFrom === dragOver) return i;
+    if (i === dragFrom) return dragOver;
+    if (dragFrom < dragOver) return i > dragFrom && i <= dragOver ? i - 1 : i;
+    return i >= dragOver && i < dragFrom ? i + 1 : i;
+  };
+
+  /** Odstęp między wierszami — potrzebny, żeby przesuwać je płynnie. */
+  const measurePitch = () => {
+    const rows = listRef.current?.querySelectorAll("[data-player-row]");
+    if (!rows || rows.length < 2) return;
+    const a = rows[0].getBoundingClientRect();
+    const b = rows[1].getBoundingClientRect();
+    const pitch = b.top - a.top;
+    if (pitch > 0) setRowPitch(pitch);
+  };
 
   /** Który wiersz listy znajduje się pod podanym Y wskaźnika. */
   const rowIndexAt = (clientY: number): number | null => {
@@ -262,9 +284,11 @@ export default function SetupPage() {
                     index={i}
                     onMove={move}
                     dragging={dragFrom === i}
-                    dropBefore={dragOver === i && dragFrom !== null && dragFrom > i}
-                    dropAfter={dragOver === i && dragFrom !== null && dragFrom < i}
+                    // Ile miejsc wiersz przesuwa się w podglądzie układu po upuszczeniu.
+                    offset={(previewSlot(i) - i) * rowPitch}
+                    slot={previewSlot(i)}
                     onGrab={() => {
+                      measurePitch();
                       setDragFrom(i);
                       setDragOver(i);
                     }}
@@ -709,8 +733,8 @@ function PlayerRow({
   onRename,
   onRemove,
   dragging,
-  dropBefore,
-  dropAfter,
+  offset,
+  slot,
   onGrab,
   onDragMove,
   onDrop,
@@ -721,8 +745,10 @@ function PlayerRow({
   onRename: (v: string) => void;
   onRemove: () => void;
   dragging: boolean;
-  dropBefore: boolean;
-  dropAfter: boolean;
+  /** Przesunięcie w pikselach do miejsca, które wiersz zajmie po upuszczeniu. */
+  offset: number;
+  /** Numer miejsca w podglądzie układu. */
+  slot: number;
   onGrab: () => void;
   onDragMove: (clientY: number) => void;
   onDrop: () => void;
@@ -731,11 +757,14 @@ function PlayerRow({
     <div
       data-player-row
       className={cx(
-        "group flex items-center gap-1.5 h-8 rounded transition-colors",
-        dragging && "opacity-40 bg-[var(--surface-2)]",
-        dropBefore && "border-t-2 border-t-[var(--accent)]",
-        dropAfter && "border-b-2 border-b-[var(--accent)]"
+        "ui-row reorder-move group flex items-center gap-1.5 h-8 rounded",
+        // Ciągnięty wiersz jedzie nad resztą i nie ma czekać na animację.
+        dragging && "relative z-10 bg-[var(--surface-2)] shadow-md ring-1 ring-[var(--accent)]"
       )}
+      style={{
+        transform: offset ? `translateY(${offset}px)` : undefined,
+        transition: dragging ? "none" : undefined,
+      }}
     >
       {/*
         Zdarzenia wskaźnika zamiast HTML5 drag-and-drop: tamto nie działa
@@ -757,7 +786,7 @@ function PlayerRow({
         onPointerCancel={onDrop}
         style={{ touchAction: "none" }}
         className={cx(
-          "w-6 h-7 shrink-0 grid place-items-center rounded text-[14px] leading-none",
+          "ui-grip w-6 h-7 shrink-0 grid place-items-center rounded text-[14px] leading-none",
           "text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]",
           "cursor-grab active:cursor-grabbing select-none",
           HOVER_CONTROLS
@@ -768,17 +797,17 @@ function PlayerRow({
         ⠿
       </span>
       <span className="w-6 shrink-0 text-center text-[11px] font-mono text-[var(--text-faint)]">
-        {index + 1}
+        {slot + 1}
       </span>
       <input
         value={player.name}
         onChange={(e) => onRename(e.target.value)}
-        className="flex-1 h-7 px-2 rounded bg-transparent border border-transparent hover:border-[var(--border)] focus:border-[var(--accent)] focus:bg-[var(--surface)] text-[13px] outline-none"
+        className="ui-input flex-1 h-7 px-2 rounded bg-transparent border border-transparent hover:border-[var(--border)] focus:border-[var(--accent)] focus:bg-[var(--surface)] text-[13px] outline-none"
       />
       <div className={cx("flex items-center gap-0.5", HOVER_CONTROLS)}>
         <button
           onClick={() => onMove(index, -1)}
-          className="w-7 h-7 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
+          className="ui-iconbtn w-7 h-7 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
           title="W górę"
           aria-label="Przenieś w górę"
         >
@@ -786,7 +815,7 @@ function PlayerRow({
         </button>
         <button
           onClick={() => onMove(index, 1)}
-          className="w-7 h-7 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
+          className="ui-iconbtn w-7 h-7 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
           title="W dół"
           aria-label="Przenieś w dół"
         >
@@ -794,7 +823,7 @@ function PlayerRow({
         </button>
         <button
           onClick={onRemove}
-          className="w-7 h-7 rounded text-[var(--text-faint)] hover:text-[var(--danger)] hover:bg-[var(--danger-soft)]"
+          className="ui-iconbtn w-7 h-7 rounded text-[var(--text-faint)] hover:text-[var(--danger)] hover:bg-[var(--danger-soft)]"
           title="Usuń"
           aria-label="Usuń gracza"
         >
@@ -866,7 +895,7 @@ function FactionRoles({
                 onClick={() => onToggle(r.id)}
                 disabled={blocked}
                 className={cx(
-                  "w-full flex items-center gap-2 text-left px-2 h-7 rounded transition-colors",
+                  "ui-row w-full flex items-center gap-2 text-left px-2 h-7 rounded transition-colors",
                   on && "bg-[var(--accent-soft)]",
                   !on && !blocked && "hover:bg-[var(--surface-2)]",
                   blocked && "opacity-40 cursor-not-allowed"

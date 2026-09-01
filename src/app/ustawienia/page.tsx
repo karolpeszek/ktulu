@@ -1,6 +1,6 @@
 "use client";
 
-import { Handedness, Theme, usePrefs } from "@/lib/prefs";
+import { Density, Handedness, Theme, usePrefs } from "@/lib/prefs";
 import { Card, cx } from "@/components/ui";
 
 function Segmented<T extends string>({
@@ -61,7 +61,7 @@ function Row({
 }
 
 export default function SettingsPage() {
-  const { theme, setTheme, handedness, setHandedness, tipSide } = usePrefs();
+  const { theme, setTheme, handedness, setHandedness, tipSide, density, setDensity } = usePrefs();
 
   return (
     <div className="flex flex-col gap-4 max-w-[900px]">
@@ -78,6 +78,21 @@ export default function SettingsPage() {
               { value: "system", label: "Auto", hint: "Za ustawieniem systemu" },
               { value: "light", label: "Jasny" },
               { value: "dark", label: "Ciemny" },
+            ]}
+          />
+        </Row>
+
+        <Row
+          title="Rozmiar elementów"
+          desc="„Dotyk” powiększa wszystko, w co się celuje: przyciski, przełączniki, pola, wiersze list i żetony w kręgu rady. Sterowanie wierszami, które normalnie pokazuje się po najechaniu, jest wtedy widoczne od razu — na ekranie dotykowym nie ma najeżdżania."
+        >
+          <Segmented<Density>
+            label="Rozmiar elementów"
+            value={density}
+            onChange={setDensity}
+            options={[
+              { value: "normal", label: "Zwykły", hint: "Mysz albo rysik" },
+              { value: "touch", label: "Dotyk", hint: "Palec, bez rysika" },
             ]}
           />
         </Row>

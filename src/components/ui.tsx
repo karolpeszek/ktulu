@@ -58,7 +58,7 @@ export function Button({
   ...rest
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant; size?: "sm" | "md" }) {
   const base =
-    "inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors disabled:opacity-40 disabled:pointer-events-none select-none border";
+    "ui-btn inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors disabled:opacity-40 disabled:pointer-events-none select-none border";
   const sizes = size === "sm" ? "h-7 px-2.5 text-[12px]" : "h-9 px-3.5 text-[13px]";
   const variants: Record<BtnVariant, string> = {
     primary:
@@ -128,7 +128,7 @@ export function Field({
 }
 
 export const inputCls =
-  "w-full h-9 px-2.5 rounded-md bg-[var(--surface)] border border-[var(--border-strong)] text-[13px] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20";
+  "ui-input w-full h-9 px-2.5 rounded-md bg-[var(--surface)] border border-[var(--border-strong)] text-[13px] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20";
 
 export function Stat({
   label,
@@ -169,13 +169,13 @@ export function Toggle({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cx(
-        "flex items-center gap-2.5 text-[13px]",
+        "ui-toggle flex items-center gap-2.5 text-[13px]",
         disabled && "opacity-40 pointer-events-none"
       )}
     >
       <span
         className={cx(
-          "w-9 h-5 rounded-full relative transition-colors border",
+          "ui-toggle-track w-9 h-5 rounded-full relative transition-colors border",
           checked
             ? "bg-[var(--accent)] border-[var(--accent)]"
             : "bg-[var(--surface-2)] border-[var(--border-strong)]"
@@ -183,7 +183,7 @@ export function Toggle({
       >
         <span
           className={cx(
-            "absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-all",
+            "ui-toggle-knob absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-all",
             checked ? "left-[18px]" : "left-0.5"
           )}
           style={!checked ? { background: "var(--text-faint)" } : undefined}

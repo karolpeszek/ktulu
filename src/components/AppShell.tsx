@@ -28,7 +28,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="app-header h-12 shrink-0 sticky top-0 z-30 bg-[var(--surface)] border-b border-[var(--border)] flex items-center px-4 gap-6">
+      <header className="app-header ui-header h-12 shrink-0 sticky top-0 z-30 bg-[var(--surface)] border-b border-[var(--border)] flex items-center px-4 gap-6">
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <span className="w-5 h-5 rounded-[5px] bg-[var(--accent)] grid place-items-center text-[11px] font-bold text-[var(--accent-text)]">
             K
@@ -46,7 +46,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 key={n.href}
                 href={n.href}
                 className={cx(
-                  "h-full px-3 flex items-center text-[13px] border-b-2 transition-colors",
+                  "ui-navlink h-full px-3 flex items-center text-[13px] border-b-2 transition-colors",
                   active
                     ? "border-[var(--accent)] text-[var(--text)] font-medium"
                     : "border-transparent text-[var(--text-dim)] hover:text-[var(--text)]"

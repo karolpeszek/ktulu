@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useMemo, useSyncExternalStore } f
 
 export type Handedness = "right" | "left";
 export type Theme = "system" | "light" | "dark";
+/** „touch” powiększa elementy dotykowe — dla palca, bez rysika. */
+export type Density = "normal" | "touch";
 
 const KEY = "ktulu.ui.prefs.v1";
 
@@ -14,14 +16,21 @@ interface Prefs {
   theme: Theme;
   /** Ukrywa karty i frakcje wszędzie, gdy ktoś zagląda przez ramię. */
   safeMode: boolean;
+  density: Density;
 }
 
-const DEFAULTS: Prefs = { handedness: "right", theme: "system", safeMode: false };
+const DEFAULTS: Prefs = {
+  handedness: "right",
+  theme: "system",
+  safeMode: false,
+  density: "normal",
+};
 
 interface Ctx extends Prefs {
   setHandedness: (h: Handedness) => void;
   setTheme: (t: Theme) => void;
   setSafeMode: (v: boolean) => void;
+  setDensity: (d: Density) => void;
   /** Strona, po której ma się pojawiać dymek, żeby nie chowała go dłoń. */
   tipSide: "left" | "right";
 }
@@ -75,6 +84,12 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
     else root.dataset.theme = prefs.theme;
   }, [prefs.theme]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    if (prefs.density === "normal") delete root.dataset.density;
+    else root.dataset.density = prefs.density;
+  }, [prefs.density]);
+
   const value = useMemo<Ctx>(() => {
     const save = (next: Prefs) => {
       try {
@@ -90,6 +105,7 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
       setHandedness: (handedness: Handedness) => save({ ...prefs, handedness }),
       setTheme: (theme: Theme) => save({ ...prefs, theme }),
       setSafeMode: (safeMode: boolean) => save({ ...prefs, safeMode }),
+      setDensity: (density: Density) => save({ ...prefs, density }),
       // Praworęczny zasłania rysikiem to, co jest na prawo od grotu.
       tipSide: prefs.handedness === "right" ? "left" : "right",
     };
@@ -107,6 +123,7 @@ export function usePrefs(): Ctx {
       setHandedness: () => {},
       setTheme: () => {},
       setSafeMode: () => {},
+      setDensity: () => {},
       tipSide: "left",
     }
   );
