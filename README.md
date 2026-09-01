@@ -110,7 +110,8 @@ gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
   dołączona ściąga Manitou „kto jest kim” na osobnej stronie,
 - „Drukuj / zapisz PDF” otwiera okno drukowania przeglądarki — wybierz „Zapisz jako PDF”.
 
-**Zasady (`/zasady`)** — pełna ściąga: cele frakcji, kolejność nocy, jawność, opisy wszystkich kart,
+**Zasady (`/zasady`)** — przycisk pobrania Wyelkiej Xięgi Ktulu (`public/xiegai.pdf`, dostępnej też
+offline) oraz pełna ściąga: cele frakcji, kolejność nocy, jawność, opisy wszystkich kart,
 tabela składów.
 
 ## Janosik (dodatek domowy)

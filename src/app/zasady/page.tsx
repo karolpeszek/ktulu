@@ -70,6 +70,25 @@ const SIZES: [number, number, number, number, number][] = Object.entries(TABLE)
 export default function RulesPage() {
   return (
     <div className="flex flex-col gap-4">
+      <Card
+        title="Wyelka Xięga Ktulu"
+        right={
+          <a
+            href="/xiegai.pdf"
+            download="Wyelka-Xiega-Ktulu.pdf"
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md border border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-text)] text-[13px] font-medium hover:brightness-110"
+          >
+            Pobierz Xięgę (PDF)
+          </a>
+        }
+      >
+        <p className="text-[12.5px] text-[var(--text-dim)] leading-relaxed">
+          Poniższa ściąga streszcza zasady na potrzeby prowadzenia gry. Pełne źródło — z fabułą
+          miasteczka Bum-bum City, omówieniem postaci i dyskusją wariantów — to Xięga: 8 stron,
+          154 kB. Plik jest w pamięci aplikacji, więc pobierzesz go także bez internetu.
+        </p>
+      </Card>
+
       <Card title="Cele frakcji">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           {FACTIONS.map((f) => (
