@@ -328,7 +328,7 @@ export default function SeatArc({
       {hover && hovered && (
         <div
           role="tooltip"
-          className="fixed z-50 pointer-events-none max-w-[280px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-2 text-[12px] leading-relaxed shadow-lg anim-fade-up"
+          className="fixed z-50 pointer-events-none max-w-[280px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-2 text-[12px] leading-relaxed shadow-lg anim-fade"
           // Rysik zasłania to, co leży po stronie trzymającej ręki, więc dymek
           // wychodzi w przeciwną i jest wyrównany do wysokości grotu.
           style={{

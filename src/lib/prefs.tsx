@@ -1,20 +1,24 @@
 "use client";
 
-import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
 
 export type Handedness = "right" | "left";
+export type Theme = "system" | "light" | "dark";
 
 const KEY = "ktulu.ui.prefs.v1";
 
 interface Prefs {
   /** Ręka, w której Manitou trzyma rysik — dymki uciekają na przeciwną stronę. */
   handedness: Handedness;
+  /** „system” idzie za ustawieniem urządzenia. */
+  theme: Theme;
 }
 
-const DEFAULTS: Prefs = { handedness: "right" };
+const DEFAULTS: Prefs = { handedness: "right", theme: "system" };
 
 interface Ctx extends Prefs {
   setHandedness: (h: Handedness) => void;
+  setTheme: (t: Theme) => void;
   /** Strona, po której ma się pojawiać dymek, żeby nie chowała go dłoń. */
   tipSide: "left" | "right";
 }
@@ -60,23 +64,32 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
   const raw = useSyncExternalStore(subscribe, readRaw, serverRaw);
   const prefs = useMemo(() => parse(raw), [raw]);
 
-  const value = useMemo<Ctx>(
-    () => ({
+  // Wymuszony motyw jedzie atrybutem na <html>; „system” zdejmuje atrybut
+  // i oddaje decyzję regule `prefers-color-scheme`.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (prefs.theme === "system") delete root.dataset.theme;
+    else root.dataset.theme = prefs.theme;
+  }, [prefs.theme]);
+
+  const value = useMemo<Ctx>(() => {
+    const save = (next: Prefs) => {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(next));
+      } catch {
+        /* brak zapisu nie psuje działania */
+      }
+      // `storage` nie leci do karty, która zapisała — budzimy ją ręcznie.
+      listeners.forEach((l) => l());
+    };
+    return {
       ...prefs,
-      setHandedness: (handedness: Handedness) => {
-        try {
-          localStorage.setItem(KEY, JSON.stringify({ ...prefs, handedness }));
-        } catch {
-          /* brak zapisu nie psuje działania */
-        }
-        // `storage` nie leci do karty, która zapisała — budzimy ją ręcznie.
-        listeners.forEach((l) => l());
-      },
+      setHandedness: (handedness: Handedness) => save({ ...prefs, handedness }),
+      setTheme: (theme: Theme) => save({ ...prefs, theme }),
       // Praworęczny zasłania rysikiem to, co jest na prawo od grotu.
       tipSide: prefs.handedness === "right" ? "left" : "right",
-    }),
-    [prefs]
-  );
+    };
+  }, [prefs]);
 
   return <PrefsCtx.Provider value={value}>{children}</PrefsCtx.Provider>;
 }
@@ -84,5 +97,5 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
 export function usePrefs(): Ctx {
   const c = useContext(PrefsCtx);
   // Komponenty renderowane poza providerem dostają wartości domyślne.
-  return c ?? { ...DEFAULTS, setHandedness: () => {}, tipSide: "left" };
+  return c ?? { ...DEFAULTS, setHandedness: () => {}, setTheme: () => {}, tipSide: "left" };
 }

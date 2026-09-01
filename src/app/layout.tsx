@@ -35,6 +35,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pl">
       <body>
+        {/* Wymuszony motyw ustawiany przed pierwszym malowaniem — inaczej przy
+            starcie mignąłby motyw systemowy, zanim React odczyta ustawienia. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'try{var t=JSON.parse(localStorage.getItem("ktulu.ui.prefs.v1")||"{}").theme;' +
+              'if(t&&t!=="system")document.documentElement.dataset.theme=t}catch(e){}',
+          }}
+        />
         <PrefsProvider>
           <GameProvider>
             <AppShell>{children}</AppShell>

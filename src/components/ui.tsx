@@ -240,7 +240,7 @@ export function Tooltip({
       {box && (
         <span
           role="tooltip"
-          className="fixed z-50 pointer-events-none max-w-[280px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] leading-relaxed text-[var(--text)] shadow-lg anim-fade-up"
+          className="fixed z-50 pointer-events-none max-w-[280px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] leading-relaxed text-[var(--text)] shadow-lg anim-fade"
           style={
             side === "beside"
               ? {

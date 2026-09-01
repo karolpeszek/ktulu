@@ -115,6 +115,8 @@ gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
   dołączona ściąga Manitou „kto jest kim” na osobnej stronie,
 - „Drukuj / zapisz PDF” otwiera okno drukowania przeglądarki — wybierz „Zapisz jako PDF”.
 
+**Ustawienia (`/ustawienia`)** — motyw (auto / jasny / ciemny) i ręka trzymająca rysik.
+
 **Zasady (`/zasady`)** — przycisk pobrania Wyelkiej Xięgi Ktulu (`public/xiegai.pdf`, dostępnej też
 offline) oraz pełna ściąga: cele frakcji, kolejność nocy, jawność, opisy wszystkich kart,
 tabela składów.
@@ -152,5 +154,6 @@ paletę: miasto niebieski, bandyci bursztynowy, Indianie czerwony, ufoki zielony
 Na ciemnym tle odcienie są w pełni pastelowe; w jasnym są tak jasne, jak pozwala kontrast tekstu
 4,5:1 — tym samym kolorem pisane są nazwy ról, więc niżej zejść się nie da.
 
-W nagłówku jest przełącznik ręki (L / P). Podpowiedzi wychodzą na stronę przeciwną do trzymanego
-rysika — praworęczny widzi je po lewej stronie grotu, więc dłoń ich nie zasłania.
+Motyw i rękę trzymającą rysik ustawia się na ekranie **Ustawienia** (`/ustawienia`). Podpowiedzi
+wychodzą na stronę przeciwną do trzymanej ręki — praworęczny widzi je po lewej stronie grotu, więc
+dłoń ich nie zasłania. Oba ustawienia zapisują się w `localStorage` i nie są częścią stanu gry.

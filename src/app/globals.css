@@ -43,8 +43,15 @@
   --warn-soft: #fbf3dd;
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Ciemny motyw: domyślnie za ustawieniem systemu, chyba że Manitou wymusił
+   jasny w ustawieniach aplikacji. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+
     --bg: #101216;
     --surface: #181b21;
     --surface-2: #1e222a;
@@ -77,6 +84,42 @@
     --warn: #e0b649;
     --warn-soft: #2a2314;
   }
+}
+
+/* Wymuszenie ciemnego motywu z ustawień — te same wartości, niezależnie od systemu. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #101216;
+  --surface: #181b21;
+  --surface-2: #1e222a;
+  --border: #2a2f39;
+  --border-strong: #3a414e;
+  --text: #e6e9ee;
+  --text-dim: #98a1af;
+  --text-faint: #6b7482;
+
+  --accent: #3d94ff;
+  --accent-soft: #16233a;
+  --accent-text: #06121f;
+
+  /* Ciemne tło znosi pełny pastel — jasne, słabo nasycone odcienie. */
+  --city: #9cbce8;
+  --city-soft: #17202b;
+  --bandit: #e8ca9c;
+  --bandit-soft: #2b2317;
+  --indian: #e89c9e;
+  --indian-soft: #2b1718;
+  --ufo: #9ce8c7;
+  --ufo-soft: #172b23;
+  --janosik: #b29ce8;
+  --janosik-soft: #1d172b;
+
+  --danger: #f0796b;
+  --danger-soft: #2e1a17;
+  --ok: #4cc482;
+  --ok-soft: #14291d;
+  --warn: #e0b649;
+  --warn-soft: #2a2314;
 }
 
 @theme inline {
@@ -173,6 +216,21 @@ body {
 
 .anim-fade-up {
   animation: ktulu-fade-up 0.18s ease-out both;
+}
+
+/* Dla elementów pozycjonowanych własnym `transform` — animacja ruszająca
+   transformacją nadpisałaby styl inline i zniosła całe ustawienie pozycji. */
+@keyframes ktulu-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.anim-fade {
+  animation: ktulu-fade 0.12s ease-out both;
 }
 .anim-joy {
   animation: ktulu-joy 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) both;
