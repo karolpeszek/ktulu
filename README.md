@@ -147,7 +147,10 @@ src/lib/store.tsx    kontekst Reacta + zapis w localStorage
 src/components/      panele nocy i dnia, diagramy, lista graczy, dziennik
 ```
 
-Motyw jasny/ciemny idzie za ustawieniem systemu (`prefers-color-scheme`). Kolory frakcji odwzorowują
-paletę prędkości portów UniFi: miasto = 2,5 Gb/s (niebieski), bandyci = 100 Mb/s (bursztynowy),
-Indianie = 10 Mb/s (czerwony), ufoki = 1 Gb/s (zielony), Janosik = 10 Gb/s (fioletowy). W jasnym
-motywie bursztyn i zieleń są przyciemnione, żeby kontrast tekstu nie schodził poniżej 4,5:1.
+Motyw jasny/ciemny idzie za ustawieniem systemu (`prefers-color-scheme`). Frakcje mają pastelową
+paletę: miasto niebieski, bandyci bursztynowy, Indianie czerwony, ufoki zielony, Janosik fioletowy.
+Na ciemnym tle odcienie są w pełni pastelowe; w jasnym są tak jasne, jak pozwala kontrast tekstu
+4,5:1 — tym samym kolorem pisane są nazwy ról, więc niżej zejść się nie da.
+
+W nagłówku jest przełącznik ręki (L / P). Podpowiedzi wychodzą na stronę przeciwną do trzymanego
+rysika — praworęczny widzi je po lewej stronie grotu, więc dłoń ich nie zasłania.

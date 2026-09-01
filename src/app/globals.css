@@ -21,19 +21,19 @@
   --accent-soft: #e6f0ff;
   --accent-text: #ffffff;
 
-  /* Frakcje w palecie prędkości portów UniFi: 2,5 Gb/s niebieski, 100 Mb/s
-     bursztynowy, 10 Mb/s czerwony, 1 Gb/s zielony, 10 Gb/s fioletowy.
-     W jasnym motywie odcienie są przyciemnione, żeby tekst zachował kontrast. */
-  --city: #0559c9;
-  --city-soft: #e4eefc;
-  --bandit: #9d6207;
-  --bandit-soft: #fbf1dc;
-  --indian: #d22e32;
-  --indian-soft: #fbe7e7;
-  --ufo: #127f50;
-  --ufo-soft: #e1f4ea;
-  --janosik: #6f45d6;
-  --janosik-soft: #eee9fb;
+  /* Frakcje w wersji pastelowej. W jasnym motywie odcienie są tak jasne, jak
+     pozwala kontrast tekstu 4,5:1 na tle strony — niżej zejść się nie da,
+     bo tym samym kolorem pisane są nazwy ról. */
+  --city: #3370c1;
+  --city-soft: #eaf1fa;
+  --bandit: #936827;
+  --bandit-soft: #faf4ea;
+  --indian: #cb3c3f;
+  --indian-soft: #faeaeb;
+  --ufo: #227f57;
+  --ufo-soft: #eafaf3;
+  --janosik: #7d5ad3;
+  --janosik-soft: #efeafa;
 
   --danger: #d13b30;
   --danger-soft: #fbe9e7;
@@ -58,17 +58,17 @@
     --accent-soft: #16233a;
     --accent-text: #06121f;
 
-    /* Na ciemnym tle odcienie UniFi wchodzą bez przyciemniania. */
-    --city: #4a9bff;
-    --city-soft: #132234;
-    --bandit: #f5a623;
-    --bandit-soft: #2c2313;
-    --indian: #ff6b6e;
-    --indian-soft: #301819;
-    --ufo: #3ecd86;
-    --ufo-soft: #12291f;
-    --janosik: #a98cf5;
-    --janosik-soft: #211b33;
+    /* Ciemne tło znosi pełny pastel — jasne, słabo nasycone odcienie. */
+    --city: #9cbce8;
+    --city-soft: #17202b;
+    --bandit: #e8ca9c;
+    --bandit-soft: #2b2317;
+    --indian: #e89c9e;
+    --indian-soft: #2b1718;
+    --ufo: #9ce8c7;
+    --ufo-soft: #172b23;
+    --janosik: #b29ce8;
+    --janosik-soft: #1d172b;
 
     --danger: #f0796b;
     --danger-soft: #2e1a17;
