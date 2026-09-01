@@ -12,13 +12,16 @@ interface Prefs {
   handedness: Handedness;
   /** „system” idzie za ustawieniem urządzenia. */
   theme: Theme;
+  /** Ukrywa karty i frakcje wszędzie, gdy ktoś zagląda przez ramię. */
+  safeMode: boolean;
 }
 
-const DEFAULTS: Prefs = { handedness: "right", theme: "system" };
+const DEFAULTS: Prefs = { handedness: "right", theme: "system", safeMode: false };
 
 interface Ctx extends Prefs {
   setHandedness: (h: Handedness) => void;
   setTheme: (t: Theme) => void;
+  setSafeMode: (v: boolean) => void;
   /** Strona, po której ma się pojawiać dymek, żeby nie chowała go dłoń. */
   tipSide: "left" | "right";
 }
@@ -86,6 +89,7 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
       ...prefs,
       setHandedness: (handedness: Handedness) => save({ ...prefs, handedness }),
       setTheme: (theme: Theme) => save({ ...prefs, theme }),
+      setSafeMode: (safeMode: boolean) => save({ ...prefs, safeMode }),
       // Praworęczny zasłania rysikiem to, co jest na prawo od grotu.
       tipSide: prefs.handedness === "right" ? "left" : "right",
     };
@@ -97,5 +101,13 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
 export function usePrefs(): Ctx {
   const c = useContext(PrefsCtx);
   // Komponenty renderowane poza providerem dostają wartości domyślne.
-  return c ?? { ...DEFAULTS, setHandedness: () => {}, setTheme: () => {}, tipSide: "left" };
+  return (
+    c ?? {
+      ...DEFAULTS,
+      setHandedness: () => {},
+      setTheme: () => {},
+      setSafeMode: () => {},
+      tipSide: "left",
+    }
+  );
 }

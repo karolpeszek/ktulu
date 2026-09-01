@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useGame } from "@/lib/store";
+import { usePrefs } from "@/lib/prefs";
 import { FACTION_LABEL } from "@/lib/types";
 import { ROLE_BY_ID } from "@/lib/roles";
 import { startNight } from "@/lib/resolve";
@@ -16,7 +16,7 @@ import { BondsPanel, ManualPanel, StatusPanel } from "@/components/SidePanels";
 
 export default function GamePage() {
   const { state, reset, loaded } = useGame();
-  const [hideRoles, setHideRoles] = useState(false);
+  const { safeMode } = usePrefs();
 
   if (!loaded) return null;
 
@@ -43,7 +43,7 @@ export default function GamePage() {
       </div>
 
       <div className="flex flex-col gap-4 xl:sticky xl:top-16">
-        <StatusPanel hideRoles={hideRoles} onHideRoles={setHideRoles} />
+        <StatusPanel />
         <Card
           title="Skład rady"
           right={
@@ -66,7 +66,7 @@ export default function GamePage() {
             </div>
           }
         >
-          <Roster state={state} hideRoles={hideRoles} />
+          <Roster state={state} hideRoles={safeMode} />
         </Card>
         <BondsPanel />
         <Card title="Dziennik">

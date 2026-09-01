@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useGame } from "@/lib/store";
+import { usePrefs } from "@/lib/prefs";
 import { FACTIONS, FACTION_LABEL, Faction } from "@/lib/types";
 import { ROLE_BY_ID } from "@/lib/roles";
 import {
@@ -16,14 +17,10 @@ import {
 import { Badge, Button, Card, Stat, Toggle, cx, inputCls, FACTION_COLOR } from "./ui";
 import FactionDonut from "./FactionDonut";
 
-export function StatusPanel({
-  hideRoles,
-  onHideRoles,
-}: {
-  hideRoles: boolean;
-  onHideRoles: (v: boolean) => void;
-}) {
+export function StatusPanel() {
   const { state } = useGame();
+  const { safeMode, setSafeMode } = usePrefs();
+  const hideRoles = safeMode;
   const counts = {} as Record<Faction, number>;
   const alive = {} as Record<Faction, number>;
   for (const f of FACTIONS) {
@@ -36,7 +33,7 @@ export function StatusPanel({
   return (
     <Card
       title="Stan rozgrywki"
-      right={<Toggle checked={hideRoles} onChange={onHideRoles} label="Tryb bezpieczny" />}
+      right={<Toggle checked={safeMode} onChange={setSafeMode} label="Tryb bezpieczny" />}
     >
       <div className="grid grid-cols-2 gap-2">
         <Stat

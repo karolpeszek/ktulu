@@ -103,6 +103,8 @@ gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
   sędziego), przeszukanie, wieszanie z ułaskawieniem burmistrza,
 - automatyczne wykrywanie zwycięstw: odkrycie posążka, szeryf z posążkiem o świcie, odpłynięcie
   bandytów, trzeci sygnał ufoków, wybicie wszystkich przez Indian, powieszenie Janosika,
+- diagram kręgu można obrócić o 180°, żeby imiona przeczytał ktoś siedzący naprzeciw,
+- tryb bezpieczny ukrywa karty i frakcje wszędzie — na liście, w kręgu rady i w podpowiedziach,
 - półkolisty diagram kręgu rady (frakcje kolorem, posążek, więzienie, ochrona, uśpieni, martwi) —
   służy też jako sposób wskazywania celu; pod spodem legenda oznaczeń, a najechanie na gracza
   pokazuje kartę, stan i przyczynę śmierci,
@@ -116,6 +118,8 @@ gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
 - „Drukuj / zapisz PDF” otwiera okno drukowania przeglądarki — wybierz „Zapisz jako PDF”.
 
 **Ustawienia (`/ustawienia`)** — motyw (auto / jasny / ciemny) i ręka trzymająca rysik.
+Podpowiedzi stają obok wskazanego elementu po stronie przeciwnej do ręki; gdy tam nie ma miejsca,
+przechodzą na drugą stronę, a przy krawędzi ekranu — pod element.
 
 **Zasady (`/zasady`)** — przycisk pobrania Wyelkiej Xięgi Ktulu (`public/xiegai.pdf`, dostępnej też
 offline) oraz pełna ściąga: cele frakcji, kolejność nocy, jawność, opisy wszystkich kart,

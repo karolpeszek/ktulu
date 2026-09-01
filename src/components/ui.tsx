@@ -194,10 +194,93 @@ export function Toggle({
   );
 }
 
+export interface TipAnchor {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 /**
- * Dymek podpowiedzi. Pozycjonowany `fixed` względem okna, więc nie obcina go
- * `overflow: hidden` kart ani przewijane listy.
+ * Dymek unoszący się nad interfejsem, przypięty do prostokąta elementu — nie
+ * chodzi za kursorem, tylko staje obok tego, co jest wskazywane. Pozycjonowany
+ * `fixed`, więc nie obcina go `overflow: hidden` kart; jeśli nie mieści się po
+ * preferowanej stronie, przechodzi na drugą, a gdy i tam brak miejsca — pod
+ * element.
  */
+export function FloatingTip({
+  anchor,
+  side,
+  children,
+}: {
+  anchor: TipAnchor;
+  side: "left" | "right" | "top";
+  children: React.ReactNode;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [pos, setPos] = React.useState<{ left: number; top: number } | null>(null);
+
+  const { left: aL, right: aR, top: aT, bottom: aB } = anchor;
+
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    const M = 8;
+    const GAP = 10;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const midY = (aT + aB) / 2;
+
+    let left: number;
+    let top: number;
+
+    if (side === "top") {
+      left = (aL + aR) / 2 - width / 2;
+      top = aT - GAP - height;
+      if (top < M) top = aB + GAP;
+    } else {
+      const fitsLeft = aL - GAP - width >= M;
+      const fitsRight = aR + GAP + width <= vw - M;
+      const preferLeft = side === "left";
+      if (preferLeft && fitsLeft) left = aL - GAP - width;
+      else if (!preferLeft && fitsRight) left = aR + GAP;
+      else if (fitsLeft) left = aL - GAP - width;
+      else if (fitsRight) left = aR + GAP;
+      else left = NaN; // ani z lewej, ani z prawej — spadamy pod element
+
+      if (Number.isNaN(left)) {
+        left = (aL + aR) / 2 - width / 2;
+        top = aB + GAP;
+        if (top + height > vh - M) top = aT - GAP - height;
+      } else {
+        top = midY - height / 2;
+      }
+    }
+
+    left = Math.max(M, Math.min(left, vw - width - M));
+    top = Math.max(M, Math.min(top, vh - height - M));
+    setPos((p) => (p && p.left === left && p.top === top ? p : { left, top }));
+  }, [aL, aR, aT, aB, side, children]);
+
+  return (
+    <div
+      ref={ref}
+      role="tooltip"
+      className="fixed z-50 pointer-events-none w-max max-w-[280px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] leading-relaxed text-[var(--text)] shadow-lg anim-fade"
+      style={{
+        left: pos?.left ?? 0,
+        top: pos?.top ?? 0,
+        // Zanim padnie pomiar, dymek jest niewidoczny — inaczej mignąłby w rogu.
+        visibility: pos ? "visible" : "hidden",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Podpowiedź przypięta do elementu, pokazywana po najechaniu. */
 export function Tooltip({
   content,
   children,
@@ -205,24 +288,19 @@ export function Tooltip({
   className,
 }: {
   content: React.ReactNode;
-  /** „obok” ucieka na stronę przeciwną do ręki trzymającej rysik. */
   children: React.ReactNode;
+  /** „beside” ucieka na stronę przeciwną do ręki trzymającej rysik. */
   side?: "top" | "beside";
   className?: string;
 }) {
   const { tipSide } = usePrefs();
-  const [box, setBox] = React.useState<{ x: number; y: number; flip: boolean } | null>(null);
+  const [box, setBox] = React.useState<TipAnchor | null>(null);
   const ref = React.useRef<HTMLSpanElement>(null);
 
   const show = () => {
     const r = ref.current?.getBoundingClientRect();
     if (!r) return;
-    if (side === "beside") {
-      const left = tipSide === "left";
-      setBox({ x: left ? r.left - 8 : r.right + 8, y: r.top + r.height / 2, flip: left });
-    } else {
-      setBox({ x: r.left + r.width / 2, y: r.top - 8, flip: false });
-    }
+    setBox({ left: r.left, right: r.right, top: r.top, bottom: r.bottom });
   };
 
   if (!content) return <>{children}</>;
@@ -238,21 +316,9 @@ export function Tooltip({
     >
       {children}
       {box && (
-        <span
-          role="tooltip"
-          className="fixed z-50 pointer-events-none max-w-[280px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] leading-relaxed text-[var(--text)] shadow-lg anim-fade"
-          style={
-            side === "beside"
-              ? {
-                  left: box.x,
-                  top: box.y,
-                  transform: `translate(${box.flip ? "-100%" : "0"}, -50%)`,
-                }
-              : { left: box.x, top: box.y, transform: "translate(-50%, -100%)" }
-          }
-        >
+        <FloatingTip anchor={box} side={side === "beside" ? tipSide : "top"}>
           {content}
-        </span>
+        </FloatingTip>
       )}
     </span>
   );

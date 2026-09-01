@@ -84,16 +84,17 @@ export default function SettingsPage() {
 
         <Row
           title="Ręka trzymająca rysik"
-          desc="Podpowiedzi wychodzą na stronę przeciwną do trzymanej ręki, żeby dłoń ich nie zasłaniała. Dotyczy podpowiedzi o graczach, krokach nocy i rolach."
+          desc="Podpowiedzi pojawiają się obok wskazanego elementu, po stronie przeciwnej do trzymanej ręki, żeby dłoń ich nie zasłaniała. Gdy po tej stronie brakuje miejsca, dymek przechodzi na drugą, a przy samej krawędzi ekranu — pod element."
         >
           <div className="flex flex-col gap-2">
             <Segmented<Handedness>
               label="Ręka"
               value={handedness}
               onChange={setHandedness}
+              // Układ przycisków odpowiada stronie: lewy = leworęczny.
               options={[
-                { value: "right", label: "Praworęczny" },
                 { value: "left", label: "Leworęczny" },
+                { value: "right", label: "Praworęczny" },
               ]}
             />
             <p className="text-[12px] text-[var(--text-faint)]">
@@ -101,7 +102,7 @@ export default function SettingsPage() {
               <strong className="text-[var(--text-dim)]">
                 {tipSide === "left" ? "po lewej" : "po prawej"}
               </strong>{" "}
-              stronie kursora.
+              stronie wskazanego elementu.
             </p>
           </div>
         </Row>
@@ -120,8 +121,10 @@ export default function SettingsPage() {
             rozgrywki, bo zmieniają się z każdą partią.
           </li>
           <li>
-            <strong className="text-[var(--text)]">Tryb bezpieczny</strong>, który ukrywa karty przed
-            zaglądającymi przez ramię, jest w panelu rozgrywki, bo włącza się go w jej trakcie.
+            <strong className="text-[var(--text)]">Tryb bezpieczny</strong> włącza się w panelu
+            rozgrywki, bo sięga się po niego w jej trakcie. Ukrywa karty wszędzie — na liście,
+            w kręgu rady i w podpowiedziach — i przeżywa odświeżenie strony, żeby przypadkiem
+            nie odsłonić kart przy przeładowaniu.
           </li>
         </ul>
       </Card>

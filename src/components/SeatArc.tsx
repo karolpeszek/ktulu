@@ -3,7 +3,7 @@
 import React from "react";
 import { GameState } from "@/lib/types";
 import { ROLE_BY_ID } from "@/lib/roles";
-import { FACTION_COLOR, Tooltip, cx } from "./ui";
+import { FACTION_COLOR, FloatingTip, Tooltip, cx, type TipAnchor } from "./ui";
 import { usePrefs } from "@/lib/prefs";
 import { FACTION_LABEL } from "@/lib/types";
 
@@ -42,8 +42,11 @@ export default function SeatArc({
   const svgRef = React.useRef<SVGSVGElement>(null);
   const [dragFrom, setDragFrom] = React.useState<number | null>(null);
   const [dragTo, setDragTo] = React.useState<number | null>(null);
-  const [hover, setHover] = React.useState<{ i: number; x: number; y: number } | null>(null);
-  const { tipSide } = usePrefs();
+  const [hover, setHover] = React.useState<{ i: number; anchor: TipAnchor } | null>(null);
+  const { tipSide, safeMode } = usePrefs();
+  const [flipped, setFlipped] = React.useState(false);
+  // Tryb bezpieczny zasłania karty w każdym widoku, nie tylko na liście.
+  const hidden = hideRoles || safeMode;
 
   const players = [...state.players].sort((a, b) => a.seat - b.seat);
   const n = players.length;
@@ -94,7 +97,10 @@ export default function SeatArc({
     const scale = W / r.width;
     const x = (clientX - r.left) * scale;
     const y = (clientY - r.top) * scale;
-    const deg = (Math.atan2(cyPt - y, x - cxPt) * 180) / Math.PI;
+    // Przy obrocie o 180° punkt trafia w przeciwległy róg układu.
+    const px = flipped ? W - x : x;
+    const py = flipped ? H - y : y;
+    const deg = (Math.atan2(cyPt - py, px - cxPt) * 180) / Math.PI;
     const raw = ((180 - pad - deg) * (n - 1)) / (180 - 2 * pad);
     return Math.max(0, Math.min(n - 1, Math.round(raw)));
   };
@@ -112,10 +118,28 @@ export default function SeatArc({
 
   return (
     <div className="relative">
+      <button
+        type="button"
+        onClick={() => setFlipped((f) => !f)}
+        aria-pressed={flipped}
+        title={
+          flipped
+            ? "Obróć z powrotem do siebie"
+            : "Obróć o 180° — imiona czyta wtedy ktoś siedzący naprzeciw"
+        }
+        className="absolute right-0 top-0 z-10 h-7 px-2.5 inline-flex items-center gap-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[12px] text-[var(--text-dim)]"
+      >
+        <span className="text-[13px] leading-none">⟳</span>
+        {flipped ? "Do mnie" : "Obróć"}
+      </button>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         className="w-full h-auto select-none overflow-visible"
+        style={{
+          transform: flipped ? "rotate(180deg)" : undefined,
+          transition: "transform 320ms cubic-bezier(0.2, 0.8, 0.3, 1)",
+        }}
         role="img"
         onPointerMove={(e) => {
           if (dragFrom === null) return;
@@ -162,7 +186,7 @@ export default function SeatArc({
           const deg = angleOf(slot);
           const c = pt(deg, R);
           const role = p.roleId ? ROLE_BY_ID[p.roleId] : null;
-          const color = hideRoles || !role ? "var(--text-faint)" : FACTION_COLOR[role.faction];
+          const color = hidden || !role ? "var(--text-faint)" : FACTION_COLOR[role.faction];
           const dead = !p.alive;
           const isSel = selected === p.id;
           const disabled = disabledIds.includes(p.id);
@@ -179,11 +203,24 @@ export default function SeatArc({
           const isHi = flags.highlight?.includes(p.id);
           const isDragged = dragFrom === i;
 
-          const track = (e: React.PointerEvent) => {
+          // Dymek przypina się do żetonu, nie do kursora — liczymy jego
+          // prostokąt na ekranie z geometrii SVG, z uwzględnieniem obrotu.
+          const anchorOf = (): TipAnchor | null => {
+            const r = svgRef.current?.getBoundingClientRect();
+            if (!r) return null;
+            const k = r.width / W;
+            const sx = r.left + (flipped ? W - c.x : c.x) * k;
+            const sy = r.top + (flipped ? H - c.y : c.y) * k;
+            const rad = nodeR * k;
+            return { left: sx - rad, right: sx + rad, top: sy - rad, bottom: sy + rad };
+          };
+
+          const track = () => {
             // Rysik i mysz zgłaszają najechanie przez zdarzenia wskaźnika;
             // natywny `title` w SVG nie pokazuje się w Safari na iPadzie.
             if (dragFrom !== null) return;
-            setHover({ i, x: e.clientX, y: e.clientY });
+            const anchor = anchorOf();
+            if (anchor) setHover({ i, anchor });
           };
 
           return (
@@ -201,7 +238,6 @@ export default function SeatArc({
               opacity={disabled ? 0.35 : isDragged ? 0.55 : 1}
               onClick={() => !disabled && onSelect?.(p.id)}
               onPointerEnter={track}
-              onPointerMove={track}
               onPointerLeave={() => setHover((h) => (h?.i === i ? null : h))}
               onPointerDown={
                 onReorder
@@ -259,7 +295,7 @@ export default function SeatArc({
                   strokeWidth={1.5}
                 />
               )}
-              {hasIdol && !hideRoles && (
+              {hasIdol && !hidden && (
                 <circle
                   cx={nodeR * 0.8}
                   cy={-nodeR * 0.8}
@@ -308,7 +344,7 @@ export default function SeatArc({
                 >
                   {p.name}
                 </text>
-                {!hideRoles && role && (
+                {!hidden && role && (
                   <text
                     textAnchor={flat ? "end" : "start"}
                     fontSize={9}
@@ -326,21 +362,11 @@ export default function SeatArc({
       </svg>
 
       {hover && hovered && (
-        <div
-          role="tooltip"
-          className="fixed z-50 pointer-events-none max-w-[280px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-2 text-[12px] leading-relaxed shadow-lg anim-fade"
-          // Rysik zasłania to, co leży po stronie trzymającej ręki, więc dymek
-          // wychodzi w przeciwną i jest wyrównany do wysokości grotu.
-          style={{
-            left: tipSide === "left" ? hover.x - 18 : hover.x + 18,
-            top: hover.y,
-            transform: `translate(${tipSide === "left" ? "-100%" : "0"}, -50%)`,
-          }}
-        >
+        <FloatingTip anchor={hover.anchor} side={tipSide}>
           <div className="font-semibold">
             {slotOf[hover.i] + 1}. {hovered.name}
           </div>
-          {hideRoles || !hoveredRole ? (
+          {hidden || !hoveredRole ? (
             <div className="text-[var(--text-dim)] mt-0.5">Karta ukryta w trybie bezpiecznym.</div>
           ) : (
             <>
@@ -358,10 +384,10 @@ export default function SeatArc({
           )}
           {(() => {
             const st = [
-              flags.idol === hovered.id && !hideRoles && "ma posążek",
+              flags.idol === hovered.id && !hidden && "ma posążek",
               flags.jailed === hovered.id && "w więzieniu — nie budzi się i nie może zginąć",
               flags.guarded === hovered.id && "chroniony przez ochroniarza",
-              flags.poisoned === hovered.id && !hideRoles && "otruty — zginie następnego dnia",
+              flags.poisoned === hovered.id && !hidden && "otruty — zginie następnego dnia",
               flags.asleep?.includes(hovered.id) &&
                 flags.jailed !== hovered.id &&
                 "nieaktywny tej nocy",
@@ -371,7 +397,7 @@ export default function SeatArc({
               <div className="text-[var(--text-dim)] mt-1">{st.join(" · ")}</div>
             ) : null;
           })()}
-        </div>
+        </FloatingTip>
       )}
     </div>
   );
@@ -379,6 +405,8 @@ export default function SeatArc({
 
 /** Objaśnienie oznaczeń używanych na diagramie kręgu. */
 export function SeatLegend({ hideRoles = false }: { hideRoles?: boolean }) {
+  const { safeMode } = usePrefs();
+  const hidden = hideRoles || safeMode;
   const items: { swatch: React.ReactNode; label: string; tip: string }[] = [
     {
       swatch: (
@@ -436,7 +464,7 @@ export function SeatLegend({ hideRoles = false }: { hideRoles?: boolean }) {
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-3 mt-1 border-t border-[var(--border)]">
       <span className="label-xs">Legenda</span>
       {items
-        .filter((it) => !(hideRoles && it.label === "posążek"))
+        .filter((it) => !(hidden && it.label === "posążek"))
         .map((it) => (
           <Tooltip key={it.label} content={it.tip}>
             <span className="flex items-center gap-1.5 text-[11.5px] text-[var(--text-dim)] cursor-help">
