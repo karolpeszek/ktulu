@@ -601,7 +601,9 @@ export default function SetupPage() {
                     update((s) => {
                       const cur = new Set(s.setup.picked[f] ?? []);
                       if (cur.has(roleId)) cur.delete(roleId);
-                      else cur.add(roleId);
+                      // Ponad limit nie wchodzimy: karta i tak nie zmieściłaby się
+                      // w puli, a w liście świeciłaby jako wybrana.
+                      else if (cur.size < counts[f]) cur.add(roleId);
                       s.setup.picked[f] = [...cur];
                     })
                   }
@@ -820,6 +822,7 @@ function FactionRoles({
   const filler = fillerRole(faction);
   const fillerCount = filler ? pool.filter((r) => r === filler.id).length : 0;
   const list = ROLES.filter((r) => r.faction === faction && !r.filler);
+  const autoCount = pool.filter((id) => !picked.includes(id) && id !== filler?.id).length;
 
   return (
     <div className="rounded-md border border-[var(--border)] overflow-hidden">
@@ -832,13 +835,15 @@ function FactionRoles({
           {FACTION_LABEL[faction]}
         </span>
         <span className="ml-auto text-[11px] font-mono text-[var(--text-dim)]">
-          {picked.length}/{size} wybrane
+          {picked.length} + {autoCount} / {size}
         </span>
       </div>
       <div className="p-2 flex flex-col gap-0.5 max-h-[260px] overflow-y-auto">
         {list.map((r) => {
           const on = picked.includes(r.id);
           const auto = !on && pool.includes(r.id);
+          // Przy pełnym limicie dokładanie kart tylko myli — najpierw trzeba coś zdjąć.
+          const blocked = !on && picked.length >= size;
           return (
             <Tooltip
               key={r.id}
@@ -850,50 +855,68 @@ function FactionRoles({
                   <span className="block text-[var(--text-dim)] mt-1">{r.desc}</span>
                   <span className="block text-[var(--text-faint)] mt-1">
                     {TIER_LABEL[r.tier]}
-                    {auto && !on ? " · dobrana automatycznie" : ""}
-                    {on ? " · wybrana ręcznie" : ""}
+                    {on && " · wybrana ręcznie — kliknij, żeby zdjąć"}
+                    {auto && " · dobrana automatycznie; kliknij, żeby przypiąć na stałe"}
+                    {blocked && ` · limit ${size} kart wyczerpany — zdejmij najpierw inną`}
                   </span>
                 </span>
               }
             >
-            <button
-              onClick={() => onToggle(r.id)}
-              className={cx(
-                "w-full flex items-start gap-2 text-left px-2 py-1.5 rounded transition-colors",
-                on ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--surface-2)]"
-              )}
-            >
-              <span
+              <button
+                onClick={() => onToggle(r.id)}
+                disabled={blocked}
                 className={cx(
-                  "mt-0.5 w-3.5 h-3.5 shrink-0 rounded-[3px] border grid place-items-center text-[9px]",
-                  on
-                    ? "bg-[var(--accent)] border-[var(--accent)] text-white"
-                    : auto
-                      ? "border-[var(--border-strong)] bg-[var(--surface-2)] text-[var(--text-faint)]"
-                      : "border-[var(--border-strong)]"
+                  "w-full flex items-center gap-2 text-left px-2 h-7 rounded transition-colors",
+                  on && "bg-[var(--accent-soft)]",
+                  !on && !blocked && "hover:bg-[var(--surface-2)]",
+                  blocked && "opacity-40 cursor-not-allowed"
                 )}
               >
-                {on ? "✓" : auto ? "·" : ""}
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="text-[12.5px]">{r.name}</span>
-                {r.leader && <span className="ml-1.5 text-[10px] text-[var(--text-faint)]">herszt/wódz</span>}
-              </span>
-              <span className="text-[10px] text-[var(--text-faint)] shrink-0 mt-0.5">
-                {TIER_LABEL[r.tier]}
-              </span>
-            </button>
+                <span
+                  className={cx(
+                    "w-3.5 h-3.5 shrink-0 rounded-[3px] grid place-items-center text-[9px] leading-none",
+                    on
+                      ? "bg-[var(--accent)] border border-[var(--accent)] text-white"
+                      : auto
+                        ? "border border-dashed border-[var(--text-faint)]"
+                        : "border border-[var(--border-strong)]"
+                  )}
+                >
+                  {on ? "✓" : ""}
+                </span>
+                <span className="flex-1 min-w-0 truncate text-[12.5px]">
+                  {r.name}
+                  {r.leader && (
+                    <span className="ml-1.5 text-[10px] text-[var(--text-faint)]">herszt/wódz</span>
+                  )}
+                </span>
+                {/* Stała szerokość znacznika — inaczej wiersze skakałyby przy
+                    każdym kliknięciu i trafiałoby się w sąsiada. */}
+                <span className="w-[74px] shrink-0 text-right text-[10px] text-[var(--text-faint)]">
+                  {on ? "ręcznie" : auto ? "auto" : TIER_LABEL[r.tier]}
+                </span>
+              </button>
             </Tooltip>
           );
         })}
         {filler && fillerCount > 0 && (
-          <div className="mt-1 px-2 py-1.5 rounded bg-[var(--surface-2)] text-[12px] text-[var(--text-dim)] flex justify-between">
+          <div className="mt-1 px-2 h-7 rounded bg-[var(--surface-2)] text-[12px] text-[var(--text-dim)] flex items-center justify-between">
             <span>{ROLE_BY_ID[filler.id].name}</span>
             <span className="font-mono">×{fillerCount}</span>
           </div>
         )}
       </div>
-      <div className="px-3 py-2 border-t border-[var(--border)] text-[11px] text-[var(--text-faint)]">
+      <div className="px-3 py-2 border-t border-[var(--border)] text-[11px] text-[var(--text-faint)] leading-relaxed">
+        <span className="block mb-0.5">
+          <strong className="text-[var(--text-dim)]">{picked.length}</strong> wybranych ręcznie
+          {autoCount > 0 && (
+            <>
+              , <strong className="text-[var(--text-dim)]">{autoCount}</strong> dobranych
+              automatycznie
+            </>
+          )}
+          . Każda karta przypięta ręcznie wypiera jedną z dobranych.
+        </span>
         {FACTION_GOAL[faction]}
       </div>
     </div>
