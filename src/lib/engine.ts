@@ -305,7 +305,7 @@ export function nightSteps(s: GameState): NightStep[] {
         title: "Dziwka",
         script: "Budzi się dziwka. Wskaż osobę, która zostaje twoim klientem.",
         detail:
-          "Manitou budzi klienta: dziwka poznaje jego kartę, a on dowiaduje się, kto jest dziwką.",
+          "UWAGA: po wskazaniu Manitou budzi klienta przy otwartych oczach dziwki. Klient musi zobaczyć, kto jest dziwką, a dziwka poznaje jego kartę. Dopiero potem oboje zasypiają.",
         select: "player",
         secret: true,
         reveals: "karta",
@@ -317,9 +317,9 @@ export function nightSteps(s: GameState): NightStep[] {
         faction: "miasto",
         roleId: "uwodziciel",
         title: "Uwodziciel",
-        script: "Budzi się uwodziciel. Wskaż osobę, którą uwodzisz. Manitou budzi tę osobę.",
+        script: "Budzi się uwodziciel. Wskaż osobę, którą uwodzisz.",
         detail:
-          "Uwiedziony nie może działać na szkodę uwodziciela, musi głosować za nim w pojedynkach i nie może ujawnić uwiedzenia.",
+          "UWAGA: uwiedziony MUSI zostać obudzony i zobaczyć, kto go uwiódł — inaczej nie ma jak przestrzegać zasady. Od tej pory nie może działać na szkodę uwodziciela: nawoływać do jego zabicia ani za tym głosować, musi głosować za nim w pojedynkach i nie może ujawnić uwiedzenia.",
         select: "player",
         secret: true,
       });
@@ -422,9 +422,9 @@ export function nightSteps(s: GameState): NightStep[] {
           faction: "bandyci",
           roleId: "szantazysta",
           title: "Szantażysta",
-          script: "Szantażysta wskazuje osobę, którą szantażuje. Manitou budzi tę osobę.",
+          script: "Budzi się szantażysta. Wskaż osobę, którą szantażujesz.",
           detail:
-            "Szantażowany nie może działać na szkodę szantażysty, musi głosować za nim w pojedynkach i nie może ujawnić szantażu.",
+            "UWAGA: szantażowany MUSI zostać obudzony i zobaczyć, kto go szantażuje — inaczej nie ma jak przestrzegać zasady. Od tej pory nie może działać na szkodę szantażysty: nawoływać do jego zabicia ani za tym głosować, musi głosować za nim w pojedynkach i nie może ujawnić szantażu.",
           select: "player",
           secret: true,
         });

@@ -12,7 +12,7 @@ import {
   startNight,
 } from "@/lib/resolve";
 import { Badge, Button, Card, Empty, cx, inputCls } from "./ui";
-import SeatArc from "./SeatArc";
+import SeatArc, { SeatLegend } from "./SeatArc";
 
 export default function DayPanel() {
   const { state, set } = useGame();
@@ -352,6 +352,7 @@ export default function DayPanel() {
           flags={{ idol: state.idolHolder, highlight: searchPicks }}
           onSelect={(id) => setHangPick(hangPick === id ? null : id)}
         />
+        <SeatLegend />
       </Card>
 
       <div className="flex items-center gap-3">

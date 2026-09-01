@@ -11,7 +11,7 @@ import NightPanel from "@/components/NightPanel";
 import DayPanel from "@/components/DayPanel";
 import Roster from "@/components/Roster";
 import EventLog from "@/components/EventLog";
-import SeatArc from "@/components/SeatArc";
+import SeatArc, { SeatLegend } from "@/components/SeatArc";
 import { BondsPanel, ManualPanel, StatusPanel } from "@/components/SidePanels";
 
 export default function GamePage() {
@@ -119,6 +119,7 @@ function EndPanel() {
 
         <Card title="Odkrycie kart">
           <SeatArc state={state} flags={{ idol: state.idolHolder }} />
+          <SeatLegend />
         </Card>
 
         <Card title="Wszystkie karty">

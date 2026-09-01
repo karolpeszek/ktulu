@@ -2,7 +2,8 @@
 
 import { GameState } from "@/lib/types";
 import { ROLE_BY_ID } from "@/lib/roles";
-import { FACTION_COLOR, cx } from "./ui";
+import { FACTION_COLOR, Tooltip, cx } from "./ui";
+import { FACTION_LABEL } from "@/lib/types";
 
 export default function Roster({
   state,
@@ -49,7 +50,51 @@ export default function Roster({
                   {p.seat + 1}
                 </td>
                 <td className="px-1 py-1.5">
-                  <span className={cx("truncate", !p.alive && "line-through")}>{p.name}</span>
+                  <Tooltip
+                    side="right"
+                    content={
+                      <span className="block">
+                        <span className="block font-semibold">
+                          {p.seat + 1}. {p.name}
+                        </span>
+                        {hideRoles || !role ? (
+                          <span className="block text-[var(--text-dim)] mt-0.5">
+                            Karta ukryta w trybie bezpiecznym.
+                          </span>
+                        ) : (
+                          <>
+                            <span className="block mt-0.5" style={{ color }}>
+                              {role.name} — {FACTION_LABEL[role.faction]}
+                            </span>
+                            <span className="block text-[var(--text-dim)] mt-1">{role.desc}</span>
+                          </>
+                        )}
+                        {!p.alive && (
+                          <span className="block text-[var(--text-dim)] mt-1">
+                            † {p.deathPhase}
+                            {p.deathNote ? ` — ${p.deathNote}` : ""}
+                          </span>
+                        )}
+                        {p.alive && (idol || jailed || guarded || poisoned || asleep) && (
+                          <span className="block text-[var(--text-dim)] mt-1">
+                            {[
+                              idol && !hideRoles && "ma posążek",
+                              jailed && "w więzieniu — nie budzi się i nie może zginąć",
+                              guarded && "chroniony przez ochroniarza",
+                              poisoned && !hideRoles && "otruty — zginie następnego dnia",
+                              asleep && !jailed && "nieaktywny tej nocy",
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        )}
+                      </span>
+                    }
+                  >
+                    <span className={cx("truncate cursor-help", !p.alive && "line-through")}>
+                      {p.name}
+                    </span>
+                  </Tooltip>
                 </td>
                 <td className="px-1 py-1.5">
                   {hideRoles ? (
@@ -99,6 +144,24 @@ export default function Roster({
           })}
         </tbody>
       </table>
+      <div className="px-3 py-2 border-t border-[var(--border)] flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[var(--text-faint)]">
+        <span className="label-xs">Oznaczenia</span>
+        <span>
+          <span className="text-[var(--warn)]">◆</span> posążek
+        </span>
+        <span>
+          <span className="text-[var(--text-dim)]">▤</span> więzienie
+        </span>
+        <span>
+          <span className="text-[var(--ok)]">◇</span> ochrona
+        </span>
+        <span>
+          <span className="text-[var(--ok)]">☠</span> trucizna
+        </span>
+        <span>
+          <span className="text-[var(--text-faint)]">z</span> nie budzi się
+        </span>
+      </div>
     </div>
   );
 }

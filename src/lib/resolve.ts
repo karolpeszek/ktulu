@@ -169,9 +169,16 @@ export function resolveStep(prev: GameState, step: NightStep, payload: StepPaylo
 
     case "whore": {
       if (target) {
-        s.bonds.push({ kind: "dziwka", from: livingWithRole(s, "dziwka")!.id, to: target.id });
-        say(s, `Karta klienta: ${roleNameOf(s, target.id)} (${factionOf(s, target.id)}).`, "Klient dowiaduje się, kto jest dziwką.");
-        log(s, `Dziwka wybrała klienta: ${target.name} (${roleNameOf(s, target.id)}).`);
+        const w = livingWithRole(s, "dziwka")!;
+        s.bonds.push({ kind: "dziwka", from: w.id, to: target.id });
+        say(
+          s,
+          `➤ OBUDŹ TERAZ: ${target.name} — przy otwartych oczach dziwki (${w.name}).`,
+          `➤ ${target.name} ma zobaczyć, kto jest dziwką; dziwce pokaż kartę klienta.`,
+          `Karta klienta: ${roleNameOf(s, target.id)} — frakcja ${factionOf(s, target.id)}.`,
+          "Gdy oboje zapamiętają, każ im zamknąć oczy."
+        );
+        log(s, `Dziwka (${w.name}) wybrała klienta: ${target.name} (${roleNameOf(s, target.id)}).`);
       }
       advance();
       break;
@@ -180,10 +187,18 @@ export function resolveStep(prev: GameState, step: NightStep, payload: StepPaylo
     case "seducer":
     case "blackmailer": {
       if (target) {
-        const kind = step.action === "seducer" ? "uwodziciel" : "szantazysta";
+        const seducing = step.action === "seducer";
+        const kind = seducing ? "uwodziciel" : "szantazysta";
         const from = livingWithRole(s, kind)!;
         s.bonds.push({ kind: kind as "uwodziciel" | "szantazysta", from: from.id, to: target.id });
-        say(s, `${target.name} jest teraz związany z ${from.name} (${roleNameOf(s, from.id)}).`);
+        say(
+          s,
+          `➤ OBUDŹ TERAZ: ${target.name} — przy otwartych oczach ${seducing ? "uwodziciela" : "szantażysty"} (${from.name}).`,
+          `➤ ${target.name} ma zobaczyć, kto go ${seducing ? "uwiódł" : "szantażuje"} — bez tego nie ma jak przestrzegać zasady.`,
+          // Bez odmiany imion — dopełniacz od dowolnego imienia bywa nie do zgadnięcia.
+          `Zasada dla tej osoby: nie wolno jej szkodzić ${seducing ? "uwodzicielowi" : "szantażyście"} — ani nawoływać do jego zabicia, ani za tym głosować; w pojedynkach musi głosować za nim i nie może ujawnić, co zaszło.`,
+          "Gdy zapamięta, każ obojgu zamknąć oczy."
+        );
         log(s, `${roleNameOf(s, from.id)} (${from.name}) → ${target.name}.`);
       }
       advance();

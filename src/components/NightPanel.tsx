@@ -13,8 +13,8 @@ import {
 } from "@/lib/engine";
 import { TARGET_AFTER_YES, nextIndex, resolveStep } from "@/lib/resolve";
 import { ROLE_BY_ID } from "@/lib/roles";
-import { Badge, Button, Card, FACTION_COLOR, cx } from "./ui";
-import SeatArc from "./SeatArc";
+import { Badge, Button, Card, FACTION_COLOR, Tooltip, cx } from "./ui";
+import SeatArc, { SeatLegend } from "./SeatArc";
 import JoyOverlay from "./JoyOverlay";
 
 /** Kogo nie wolno wskazać w danym kroku. */
@@ -108,11 +108,23 @@ export default function NightPanel() {
           <div className="label-xs mb-1" style={{ color: "var(--warn)" }}>
             Tylko dla Manitou
           </div>
-          {state.feedback.filter(Boolean).map((f, i) => (
-            <p key={i} className="text-[13.5px] leading-relaxed">
-              {f}
-            </p>
-          ))}
+          {state.feedback.filter(Boolean).map((f, i) =>
+            // Linie zaczynające się od ➤ to polecenia do wykonania przy stole,
+            // nie informacja — dostają mocniejszy głos niż reszta.
+            f.startsWith("➤") ? (
+              <p
+                key={i}
+                className="text-[13.5px] font-semibold leading-relaxed"
+                style={{ color: "var(--warn)" }}
+              >
+                {f}
+              </p>
+            ) : (
+              <p key={i} className="text-[13.5px] leading-relaxed">
+                {f}
+              </p>
+            )
+          )}
         </div>
       )}
 
@@ -289,6 +301,7 @@ export default function NightPanel() {
             poisoned: state.poisoned,
           }}
         />
+        <SeatLegend />
       </Card>
 
       <Card title="Przebieg nocy">
@@ -311,7 +324,32 @@ export default function NightPanel() {
                   className="w-1.5 h-1.5 rounded-full shrink-0"
                   style={{ background: done ? "var(--text-faint)" : c }}
                 />
-                <span className={cx("flex-1", done && "text-[var(--text-faint)]")}>{st.title}</span>
+                <Tooltip
+                  className="flex-1 min-w-0"
+                  side="right"
+                  content={
+                    <span className="block">
+                      <span className="block font-semibold">{st.title}</span>
+                      <span className="block text-[var(--text-dim)] mt-0.5">{st.script}</span>
+                      {st.detail && (
+                        <span className="block text-[var(--text-dim)] mt-1">{st.detail}</span>
+                      )}
+                      <span className="block mt-1 text-[var(--text-faint)]">
+                        {st.secret ? "Działanie tajne" : "Działanie jawne"}
+                        {reason ? ` · pomijany: ${reason}` : ""}
+                      </span>
+                    </span>
+                  }
+                >
+                  <span
+                    className={cx(
+                      "truncate cursor-help",
+                      done && "text-[var(--text-faint)]"
+                    )}
+                  >
+                    {st.title}
+                  </span>
+                </Tooltip>
                 {cur && <Badge color="var(--accent)">teraz</Badge>}
                 {!cur && reason && (
                   <span className="text-[11px] text-[var(--text-faint)] truncate max-w-[45%]">

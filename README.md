@@ -82,7 +82,7 @@ gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
 
 **Przygotowanie (`/`)**
 - lista graczy (pojedynczo lub wklejona hurtem), kolejność = kolejność w kręgu — istotna dla
-  detektora ufoków,
+  detektora ufoków; kolejność zmienia się przeciąganiem za uchwyt albo strzałkami,
 - skład frakcji z tabeli Xięgi dla 12–30 graczy (3 lub 4 frakcje), z ręczną korektą,
 - wybór kart: ręcznie albo automatycznie (kluczowe → tradycyjne → opcjonalne → kontrowersyjne,
   reszta to szeregowi członkowie frakcji),
@@ -95,12 +95,15 @@ gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
   do odczytania na głos, oznaczeniem „jawne / tajne” i wynikiem widocznym tylko dla Manitou,
 - kroki niewykonalne (postać martwa, spita, w więzieniu, zdolność zużyta) są pokazywane jako
   pomijane wraz z powodem,
+- role, które budzą drugą osobę (dziwka, uwodziciel, szantażysta), dostają wyróżnione polecenie
+  „OBUDŹ TERAZ …” — bez tego uwiedziony czy szantażowany nie wiedziałby, kogo dotyczy zakaz,
 - dzień: poranny raport, trucizna szamanki, pojedynki (z nadpisaniem wyniku przez rewolwerowca lub
   sędziego), przeszukanie, wieszanie z ułaskawieniem burmistrza,
 - automatyczne wykrywanie zwycięstw: odkrycie posążka, szeryf z posążkiem o świcie, odpłynięcie
   bandytów, trzeci sygnał ufoków, wybicie wszystkich przez Indian, powieszenie Janosika,
 - półkolisty diagram kręgu rady (frakcje kolorem, posążek, więzienie, ochrona, uśpieni, martwi) —
-  służy też jako sposób wskazywania celu,
+  służy też jako sposób wskazywania celu; pod spodem legenda oznaczeń, a najechanie na gracza
+  pokazuje kartę, stan i przyczynę śmierci,
 - panel korekty ręcznej: Manitou zawsze może nadpisać stan gry i ogłosić dowolne zwycięstwo.
 
 **Karteczki (`/karty`)**

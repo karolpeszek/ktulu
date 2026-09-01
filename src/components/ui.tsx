@@ -193,6 +193,63 @@ export function Toggle({
   );
 }
 
+/**
+ * Dymek podpowiedzi. Pozycjonowany `fixed` względem okna, więc nie obcina go
+ * `overflow: hidden` kart ani przewijane listy.
+ */
+export function Tooltip({
+  content,
+  children,
+  side = "top",
+  className,
+}: {
+  content: React.ReactNode;
+  children: React.ReactNode;
+  side?: "top" | "right";
+  className?: string;
+}) {
+  const [box, setBox] = React.useState<{ x: number; y: number } | null>(null);
+  const ref = React.useRef<HTMLSpanElement>(null);
+
+  const show = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    setBox(
+      side === "right"
+        ? { x: r.right + 8, y: r.top + r.height / 2 }
+        : { x: r.left + r.width / 2, y: r.top - 8 }
+    );
+  };
+
+  if (!content) return <>{children}</>;
+
+  return (
+    <span
+      ref={ref}
+      className={cx("inline-flex", className)}
+      onMouseEnter={show}
+      onMouseLeave={() => setBox(null)}
+      onFocus={show}
+      onBlur={() => setBox(null)}
+    >
+      {children}
+      {box && (
+        <span
+          role="tooltip"
+          className="fixed z-50 pointer-events-none max-w-[280px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] leading-relaxed text-[var(--text)] shadow-lg anim-fade-up"
+          style={
+            side === "right"
+              ? { left: box.x, top: box.y, transform: "translateY(-50%)" }
+              : { left: box.x, top: box.y, transform: "translate(-50%, -100%)" }
+          }
+        >
+          {content}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function Empty({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-[13px] text-[var(--text-faint)] py-6 text-center border border-dashed border-[var(--border)] rounded-md">

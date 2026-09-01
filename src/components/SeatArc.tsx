@@ -3,7 +3,8 @@
 import React from "react";
 import { GameState } from "@/lib/types";
 import { ROLE_BY_ID } from "@/lib/roles";
-import { FACTION_COLOR, cx } from "./ui";
+import { FACTION_COLOR, Tooltip, cx } from "./ui";
+import { FACTION_LABEL } from "@/lib/types";
 
 export interface SeatFlags {
   idol?: string | null;
@@ -112,6 +113,20 @@ export default function SeatArc({
         const isPoisoned = flags.poisoned === p.id;
         const isHi = flags.highlight?.includes(p.id);
 
+        const tip = [
+          `${p.seat + 1}. ${p.name}`,
+          hideRoles || !role ? null : `${role.name} — ${FACTION_LABEL[role.faction]}`,
+          dead ? `† ${p.deathPhase ?? "nie żyje"}${p.deathNote ? `: ${p.deathNote}` : ""}` : null,
+          hasIdol && !hideRoles ? "Ma posążek" : null,
+          isJailed ? "W więzieniu — nie budzi się i nie może zginąć" : null,
+          isGuarded ? "Chroniony przez ochroniarza" : null,
+          isAsleep && !isJailed ? "Nieaktywny tej nocy — nie budzi się" : null,
+          isPoisoned ? "Otruty — zginie następnego dnia" : null,
+          disabled ? "Nie można wskazać" : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
         return (
           <g
             key={p.id}
@@ -119,6 +134,7 @@ export default function SeatArc({
             opacity={disabled ? 0.35 : 1}
             onClick={() => !disabled && onSelect?.(p.id)}
           >
+            <title>{tip}</title>
             {(isSel || isHi) && (
               <circle
                 cx={c.x}
@@ -225,6 +241,89 @@ export default function SeatArc({
           </g>
         );
       })}
+    </svg>
+  );
+}
+
+/** Objaśnienie oznaczeń używanych na diagramie kręgu. */
+export function SeatLegend({ hideRoles = false }: { hideRoles?: boolean }) {
+  const items: { swatch: React.ReactNode; label: string; tip: string }[] = [
+    {
+      swatch: (
+        <span className="flex items-center gap-0.5">
+          {(["miasto", "bandyci", "indianie", "ufoki", "janosik"] as const).map((f) => (
+            <span
+              key={f}
+              className="w-2 h-2 rounded-full"
+              style={{ background: FACTION_COLOR[f] }}
+            />
+          ))}
+        </span>
+      ),
+      label: "kolor = frakcja",
+      tip: "Obwódka i podpis pod imieniem mają kolor frakcji: miasto, bandyci, Indianie, ufoki, Janosik. W trybie „ukryj karty” wszyscy są szarzy.",
+    },
+    {
+      swatch: <Swatch><circle cx="11" cy="11" r="8" fill="none" stroke="var(--warn)" strokeWidth="1.5" /><circle cx="17" cy="5" r="4" fill="var(--warn)" /></Swatch>,
+      label: "posążek",
+      tip: "Bursztynowa kropka przy prawym górnym rogu żetonu — ta osoba trzyma posążek. Widoczna tylko dla Manitou.",
+    },
+    {
+      swatch: <Swatch><circle cx="11" cy="11" r="8" fill="none" stroke="var(--text-dim)" strokeWidth="1.5" strokeDasharray="3 3" /></Swatch>,
+      label: "nieaktywny",
+      tip: "Przerywana obwódka — ta osoba nie budzi się tej nocy: spita przez opoja, zajęta przez szulera albo zamknięta w więzieniu. Nie może przekazać ani przyjąć posążka.",
+    },
+    {
+      swatch: <Swatch><circle cx="11" cy="11" r="8" fill="none" stroke="var(--text-dim)" strokeWidth="1.5" /><rect x="4" y="19" width="14" height="3" fill="var(--text-dim)" /></Swatch>,
+      label: "więzienie",
+      tip: "Szara belka pod żetonem — szeryf zamknął tę osobę na noc. Nie budzi się i nie można jej zabić, ale wolno ją sprawdzić pastorem czy szamanem.",
+    },
+    {
+      swatch: <Swatch><circle cx="11" cy="11" r="8" fill="none" stroke="var(--text-dim)" strokeWidth="1.5" /><circle cx="11" cy="11" r="10.5" fill="none" stroke="var(--ok)" strokeWidth="1.5" strokeDasharray="2 3" /></Swatch>,
+      label: "ochrona",
+      tip: "Zielony pierścień — ochroniarz chroni tę osobę tej nocy. Nie zginie, ale można ją okraść, spowiadać czy spić.",
+    },
+    {
+      swatch: <Swatch><circle cx="11" cy="11" r="8" fill="none" stroke="var(--text-dim)" strokeWidth="1.5" /><circle cx="5" cy="5" r="3.5" fill="var(--ok)" /></Swatch>,
+      label: "trucizna",
+      tip: "Zielona kropka po lewej — szamanka podłożyła truciznę. Ta osoba zzielenieje i zginie następnego dnia, przed głosowaniami.",
+    },
+    {
+      swatch: <Swatch><circle cx="11" cy="11" r="8" fill="none" stroke="var(--border-strong)" strokeWidth="1" /><path d="M7 7 L15 15 M15 7 L7 15" stroke="var(--text-faint)" strokeWidth="1.5" /></Swatch>,
+      label: "martwy",
+      tip: "Przekreślony żeton i przekreślone imię — ta osoba nie żyje. Najedź na nią, żeby zobaczyć, kiedy i jak zginęła.",
+    },
+    {
+      swatch: <Swatch><circle cx="11" cy="11" r="8" fill="none" stroke="var(--text-dim)" strokeWidth="1.5" /><circle cx="11" cy="11" r="10.5" fill="none" stroke="var(--accent)" strokeWidth="2" /></Swatch>,
+      label: "wskazany",
+      tip: "Niebieski pierścień — osoba wskazana w bieżącym kroku, jeszcze przed zatwierdzeniem.",
+    },
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-3 mt-1 border-t border-[var(--border)]">
+      <span className="label-xs">Legenda</span>
+      {items
+        .filter((it) => !(hideRoles && it.label === "posążek"))
+        .map((it) => (
+          <Tooltip key={it.label} content={it.tip}>
+            <span className="flex items-center gap-1.5 text-[11.5px] text-[var(--text-dim)] cursor-help">
+              {it.swatch}
+              {it.label}
+            </span>
+          </Tooltip>
+        ))}
+      <span className="text-[11.5px] text-[var(--text-faint)] ml-auto">
+        Najedź na gracza, aby zobaczyć szczegóły.
+      </span>
+    </div>
+  );
+}
+
+function Swatch({ children }: { children: React.ReactNode }) {
+  return (
+    <svg viewBox="0 0 22 24" width="15" height="16" className="shrink-0 overflow-visible">
+      {children}
     </svg>
   );
 }

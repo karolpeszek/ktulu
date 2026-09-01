@@ -19,9 +19,20 @@ import {
   totalOf,
 } from "@/lib/setup";
 import { firstIndex } from "@/lib/resolve";
-import { Badge, Button, Card, Empty, FACTION_COLOR, Field, Toggle, cx, inputCls } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Empty,
+  FACTION_COLOR,
+  Field,
+  Toggle,
+  Tooltip,
+  cx,
+  inputCls,
+} from "@/components/ui";
 import FactionDonut from "@/components/FactionDonut";
-import SeatArc from "@/components/SeatArc";
+import SeatArc, { SeatLegend } from "@/components/SeatArc";
 
 let idSeq = 0;
 const newId = () => `p${Date.now().toString(36)}${idSeq++}`;
@@ -32,6 +43,8 @@ export default function SetupPage() {
   const [name, setName] = useState("");
   const [bulk, setBulk] = useState("");
   const [showBulk, setShowBulk] = useState(false);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
 
   const players = state.players;
   const withJanosik = state.setup.withJanosik;
@@ -85,6 +98,18 @@ export default function SetupPage() {
     });
     setBulk("");
     setShowBulk(false);
+  };
+
+  /** Przenosi gracza z pozycji `from` na pozycję `to`, przesuwając resztę. */
+  const reorder = (from: number, to: number) => {
+    if (from === to) return;
+    update((s) => {
+      const arr = [...s.players].sort((a, b) => a.seat - b.seat);
+      const [moved] = arr.splice(from, 1);
+      arr.splice(to, 0, moved);
+      arr.forEach((p, k) => (p.seat = k));
+      s.players = arr;
+    });
   };
 
   const move = (i: number, dir: -1 | 1) => {
@@ -221,6 +246,16 @@ export default function SetupPage() {
                     player={p}
                     index={i}
                     onMove={move}
+                    dragging={dragFrom === i}
+                    dropBefore={dragOver === i && dragFrom !== null && dragFrom > i}
+                    dropAfter={dragOver === i && dragFrom !== null && dragFrom < i}
+                    onDragStart={() => setDragFrom(i)}
+                    onDragEnter={() => setDragOver(i)}
+                    onDragEnd={() => {
+                      if (dragFrom !== null && dragOver !== null) reorder(dragFrom, dragOver);
+                      setDragFrom(null);
+                      setDragOver(null);
+                    }}
                     onRename={(v) =>
                       update((s) => {
                         const t = s.players.find((x) => x.id === p.id);
@@ -505,6 +540,7 @@ export default function SetupPage() {
             }
           >
             <SeatArc state={state} />
+            <SeatLegend />
           </Card>
 
           <Card
@@ -638,15 +674,61 @@ function PlayerRow({
   onMove,
   onRename,
   onRemove,
+  dragging,
+  dropBefore,
+  dropAfter,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
 }: {
   player: Player;
   index: number;
   onMove: (i: number, d: -1 | 1) => void;
   onRename: (v: string) => void;
   onRemove: () => void;
+  dragging: boolean;
+  dropBefore: boolean;
+  dropAfter: boolean;
+  onDragStart: () => void;
+  onDragEnter: () => void;
+  onDragEnd: () => void;
 }) {
+  // Przeciąganie uzbraja dopiero chwyt — inaczej nie dałoby się zaznaczyć tekstu w polu imienia.
+  const [armed, setArmed] = useState(false);
+
   return (
-    <div className="group flex items-center gap-1.5 h-8">
+    <div
+      draggable={armed}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        // Firefox nie zacznie przeciągania bez ustawionych danych.
+        e.dataTransfer.setData("text/plain", player.id);
+        onDragStart();
+      }}
+      onDragEnter={onDragEnter}
+      onDragOver={(e) => e.preventDefault()}
+      onDragEnd={() => {
+        setArmed(false);
+        onDragEnd();
+      }}
+      className={cx(
+        "group flex items-center gap-1.5 h-8 rounded transition-colors",
+        dragging && "opacity-40",
+        dropBefore && "border-t-2 border-t-[var(--accent)]",
+        dropAfter && "border-b-2 border-b-[var(--accent)]"
+      )}
+    >
+      <Tooltip content="Przeciągnij, aby zmienić miejsce w kręgu. Kolejność ma znaczenie dla detektora ufoków.">
+        <span
+          onMouseDown={() => setArmed(true)}
+          onMouseUp={() => setArmed(false)}
+          onTouchStart={() => setArmed(true)}
+          className="w-4 shrink-0 text-center text-[13px] leading-none text-[var(--text-faint)] opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
+          aria-label="Uchwyt do przeciągania"
+        >
+          ⠿
+        </span>
+      </Tooltip>
       <span className="w-6 shrink-0 text-center text-[11px] font-mono text-[var(--text-faint)]">
         {index + 1}
       </span>
@@ -719,14 +801,28 @@ function FactionRoles({
           const on = picked.includes(r.id);
           const auto = !on && pool.includes(r.id);
           return (
-            <button
+            <Tooltip
               key={r.id}
+              side="right"
+              className="w-full"
+              content={
+                <span className="block">
+                  <span className="block font-semibold">{r.name}</span>
+                  <span className="block text-[var(--text-dim)] mt-1">{r.desc}</span>
+                  <span className="block text-[var(--text-faint)] mt-1">
+                    {TIER_LABEL[r.tier]}
+                    {auto && !on ? " · dobrana automatycznie" : ""}
+                    {on ? " · wybrana ręcznie" : ""}
+                  </span>
+                </span>
+              }
+            >
+            <button
               onClick={() => onToggle(r.id)}
               className={cx(
-                "flex items-start gap-2 text-left px-2 py-1.5 rounded transition-colors",
+                "w-full flex items-start gap-2 text-left px-2 py-1.5 rounded transition-colors",
                 on ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--surface-2)]"
               )}
-              title={r.desc}
             >
               <span
                 className={cx(
@@ -748,6 +844,7 @@ function FactionRoles({
                 {TIER_LABEL[r.tier]}
               </span>
             </button>
+            </Tooltip>
           );
         })}
         {filler && fillerCount > 0 && (
