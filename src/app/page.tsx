@@ -842,7 +842,7 @@ function FactionRoles({
           return (
             <Tooltip
               key={r.id}
-              side="right"
+              side="beside"
               className="w-full"
               content={
                 <span className="block">

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Faction } from "@/lib/types";
+import { usePrefs } from "@/lib/prefs";
 
 export function cx(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(" ");
@@ -204,21 +205,24 @@ export function Tooltip({
   className,
 }: {
   content: React.ReactNode;
+  /** „obok” ucieka na stronę przeciwną do ręki trzymającej rysik. */
   children: React.ReactNode;
-  side?: "top" | "right";
+  side?: "top" | "beside";
   className?: string;
 }) {
-  const [box, setBox] = React.useState<{ x: number; y: number } | null>(null);
+  const { tipSide } = usePrefs();
+  const [box, setBox] = React.useState<{ x: number; y: number; flip: boolean } | null>(null);
   const ref = React.useRef<HTMLSpanElement>(null);
 
   const show = () => {
     const r = ref.current?.getBoundingClientRect();
     if (!r) return;
-    setBox(
-      side === "right"
-        ? { x: r.right + 8, y: r.top + r.height / 2 }
-        : { x: r.left + r.width / 2, y: r.top - 8 }
-    );
+    if (side === "beside") {
+      const left = tipSide === "left";
+      setBox({ x: left ? r.left - 8 : r.right + 8, y: r.top + r.height / 2, flip: left });
+    } else {
+      setBox({ x: r.left + r.width / 2, y: r.top - 8, flip: false });
+    }
   };
 
   if (!content) return <>{children}</>;
@@ -238,8 +242,12 @@ export function Tooltip({
           role="tooltip"
           className="fixed z-50 pointer-events-none max-w-[280px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] leading-relaxed text-[var(--text)] shadow-lg anim-fade-up"
           style={
-            side === "right"
-              ? { left: box.x, top: box.y, transform: "translateY(-50%)" }
+            side === "beside"
+              ? {
+                  left: box.x,
+                  top: box.y,
+                  transform: `translate(${box.flip ? "-100%" : "0"}, -50%)`,
+                }
               : { left: box.x, top: box.y, transform: "translate(-50%, -100%)" }
           }
         >

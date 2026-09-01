@@ -4,6 +4,7 @@ import React from "react";
 import { GameState } from "@/lib/types";
 import { ROLE_BY_ID } from "@/lib/roles";
 import { FACTION_COLOR, Tooltip, cx } from "./ui";
+import { usePrefs } from "@/lib/prefs";
 import { FACTION_LABEL } from "@/lib/types";
 
 export interface SeatFlags {
@@ -42,6 +43,7 @@ export default function SeatArc({
   const [dragFrom, setDragFrom] = React.useState<number | null>(null);
   const [dragTo, setDragTo] = React.useState<number | null>(null);
   const [hover, setHover] = React.useState<{ i: number; x: number; y: number } | null>(null);
+  const { tipSide } = usePrefs();
 
   const players = [...state.players].sort((a, b) => a.seat - b.seat);
   const n = players.length;
@@ -327,7 +329,13 @@ export default function SeatArc({
         <div
           role="tooltip"
           className="fixed z-50 pointer-events-none max-w-[280px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-2 text-[12px] leading-relaxed shadow-lg anim-fade-up"
-          style={{ left: hover.x, top: hover.y - 14, transform: "translate(-50%, -100%)" }}
+          // Rysik zasłania to, co leży po stronie trzymającej ręki, więc dymek
+          // wychodzi w przeciwną i jest wyrównany do wysokości grotu.
+          style={{
+            left: tipSide === "left" ? hover.x - 18 : hover.x + 18,
+            top: hover.y,
+            transform: `translate(${tipSide === "left" ? "-100%" : "0"}, -50%)`,
+          }}
         >
           <div className="font-semibold">
             {slotOf[hover.i] + 1}. {hovered.name}

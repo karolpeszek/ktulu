@@ -51,7 +51,7 @@ export default function Roster({
                 </td>
                 <td className="px-1 py-1.5">
                   <Tooltip
-                    side="right"
+                    side="beside"
                     content={
                       <span className="block">
                         <span className="block font-semibold">

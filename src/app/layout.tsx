@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { GameProvider } from "@/lib/store";
+import { PrefsProvider } from "@/lib/prefs";
 import AppShell from "@/components/AppShell";
 import UpdatePrompt from "@/components/UpdatePrompt";
 
@@ -34,10 +35,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pl">
       <body>
-        <GameProvider>
-          <AppShell>{children}</AppShell>
-          <UpdatePrompt />
-        </GameProvider>
+        <PrefsProvider>
+          <GameProvider>
+            <AppShell>{children}</AppShell>
+            <UpdatePrompt />
+          </GameProvider>
+        </PrefsProvider>
       </body>
     </html>
   );

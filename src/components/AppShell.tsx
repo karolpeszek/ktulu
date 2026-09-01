@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useGame } from "@/lib/store";
 import { cx, Badge } from "./ui";
+import { usePrefs } from "@/lib/prefs";
 
 const NAV = [
   { href: "/", label: "Przygotowanie" },
@@ -58,6 +59,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <HandednessToggle />
           {loaded && state.players.length > 0 && (
             <>
               <Badge>{`${state.players.filter((p) => p.alive).length} żywych`}</Badge>
@@ -78,6 +80,43 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className="flex-1 w-full max-w-[1500px] mx-auto p-4">{children}</main>
+    </div>
+  );
+}
+
+/**
+ * Wybór ręki. Dymki podpowiedzi wychodzą na stronę przeciwną do trzymanego
+ * rysika — inaczej dłoń zasłania to, co miało się właśnie przeczytać.
+ */
+function HandednessToggle() {
+  const { handedness, setHandedness } = usePrefs();
+
+  return (
+    <div
+      className="flex items-center rounded-md border border-[var(--border-strong)] overflow-hidden h-7"
+      role="group"
+      aria-label="Ręka trzymająca rysik"
+    >
+      {(["left", "right"] as const).map((h) => (
+        <button
+          key={h}
+          onClick={() => setHandedness(h)}
+          aria-pressed={handedness === h}
+          title={
+            h === "right"
+              ? "Praworęczny — podpowiedzi po lewej stronie kursora"
+              : "Leworęczny — podpowiedzi po prawej stronie kursora"
+          }
+          className={cx(
+            "px-2 h-full text-[11px] font-medium transition-colors",
+            handedness === h
+              ? "bg-[var(--accent)] text-[var(--accent-text)]"
+              : "text-[var(--text-dim)] hover:bg-[var(--surface-2)]"
+          )}
+        >
+          {h === "left" ? "L" : "P"}
+        </button>
+      ))}
     </div>
   );
 }

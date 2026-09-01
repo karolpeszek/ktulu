@@ -326,7 +326,7 @@ export default function NightPanel() {
                 />
                 <Tooltip
                   className="flex-1 min-w-0"
-                  side="right"
+                  side="beside"
                   content={
                     <span className="block">
                       <span className="block font-semibold">{st.title}</span>
