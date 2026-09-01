@@ -33,7 +33,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pl">
+    // Atrybuty data-theme / data-density dokłada skrypt poniżej, jeszcze przed
+    // hydracją — rozjazd z HTML-em z serwera jest tu zamierzony.
+    <html lang="pl" suppressHydrationWarning>
       <body>
         {/* Wymuszony motyw ustawiany przed pierwszym malowaniem — inaczej przy
             starcie mignąłby motyw systemowy, zanim React odczyta ustawienia. */}

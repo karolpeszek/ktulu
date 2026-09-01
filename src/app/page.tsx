@@ -823,9 +823,9 @@ function PlayerRow({
       <input
         value={player.name}
         onChange={(e) => onRename(e.target.value)}
-        className="ui-input flex-1 h-7 px-2 rounded bg-transparent border border-transparent hover:border-[var(--border)] focus:border-[var(--accent)] focus:bg-[var(--surface)] text-[13px] outline-none"
+        className="ui-input flex-1 min-w-0 h-7 px-2 rounded bg-transparent border border-transparent hover:border-[var(--border)] focus:border-[var(--accent)] focus:bg-[var(--surface)] text-[13px] outline-none"
       />
-      <div className={cx("flex items-center gap-0.5", HOVER_CONTROLS)}>
+      <div className={cx("ui-rowctl flex items-center gap-0.5 shrink-0", HOVER_CONTROLS)}>
         <button
           onClick={() => onMove(index, -1)}
           className="ui-iconbtn w-7 h-7 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"

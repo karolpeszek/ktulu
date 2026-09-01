@@ -469,9 +469,11 @@ body {
   font-size: 17px;
 }
 
-/* Sterowanie wierszem jest zawsze widoczne — na dotyku nie ma najeżdżania. */
+/* Sterowanie wierszem jest zawsze widoczne — na dotyku nie ma najeżdżania.
+   Opakowanie też, inaczej jego przezroczystość i tak zgasiłaby przyciski. */
 :root[data-density="touch"] .ui-grip,
-:root[data-density="touch"] .ui-iconbtn {
+:root[data-density="touch"] .ui-iconbtn,
+:root[data-density="touch"] .ui-rowctl {
   opacity: 1 !important;
 }
 
