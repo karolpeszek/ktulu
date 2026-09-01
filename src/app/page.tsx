@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/store";
 import { FACTIONS, FACTION_GOAL, FACTION_LABEL, Faction, Player } from "@/lib/types";
@@ -45,6 +45,18 @@ export default function SetupPage() {
   const [showBulk, setShowBulk] = useState(false);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  /** Który wiersz listy znajduje się pod podanym Y wskaźnika. */
+  const rowIndexAt = (clientY: number): number | null => {
+    const rows = listRef.current?.querySelectorAll("[data-player-row]");
+    if (!rows?.length) return null;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i].getBoundingClientRect();
+      if (clientY < r.bottom) return i;
+    }
+    return rows.length - 1;
+  };
 
   const players = state.players;
   const withJanosik = state.setup.withJanosik;
@@ -236,7 +248,10 @@ export default function SetupPage() {
               </form>
             )}
 
-            <div className="mt-3 flex flex-col gap-1 max-h-[420px] overflow-y-auto -mx-1 px-1">
+            <div
+              ref={listRef}
+              className="mt-3 flex flex-col gap-1 max-h-[420px] overflow-y-auto -mx-1 px-1"
+            >
               {players.length === 0 && <Empty>Brak graczy. Dodaj co najmniej 4 osoby.</Empty>}
               {[...players]
                 .sort((a, b) => a.seat - b.seat)
@@ -249,9 +264,15 @@ export default function SetupPage() {
                     dragging={dragFrom === i}
                     dropBefore={dragOver === i && dragFrom !== null && dragFrom > i}
                     dropAfter={dragOver === i && dragFrom !== null && dragFrom < i}
-                    onDragStart={() => setDragFrom(i)}
-                    onDragEnter={() => setDragOver(i)}
-                    onDragEnd={() => {
+                    onGrab={() => {
+                      setDragFrom(i);
+                      setDragOver(i);
+                    }}
+                    onDragMove={(clientY) => {
+                      const to = rowIndexAt(clientY);
+                      if (to !== null) setDragOver(to);
+                    }}
+                    onDrop={() => {
                       if (dragFrom !== null && dragOver !== null) reorder(dragFrom, dragOver);
                       setDragFrom(null);
                       setDragOver(null);
@@ -539,8 +560,12 @@ export default function SetupPage() {
               </div>
             }
           >
-            <SeatArc state={state} />
+            <SeatArc state={state} onReorder={reorder} />
             <SeatLegend />
+            <p className="mt-2 text-[11.5px] text-[var(--text-faint)]">
+              Przeciągnij gracza po łuku, aby zmienić kolejność siedzenia — albo użyj uchwytu przy
+              liście obok. Kolejność w kręgu ma znaczenie dla detektora ufoków.
+            </p>
           </Card>
 
           <Card
@@ -668,6 +693,13 @@ export default function SetupPage() {
   );
 }
 
+/**
+ * Sterowanie widoczne bez najeżdżania na urządzeniach dotykowych i rysikowych —
+ * tam `hover` albo nie istnieje, albo (Apple Pencil w trybie blokady) nie działa.
+ */
+const HOVER_CONTROLS =
+  "opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity";
+
 function PlayerRow({
   player,
   index,
@@ -677,9 +709,9 @@ function PlayerRow({
   dragging,
   dropBefore,
   dropAfter,
-  onDragStart,
-  onDragEnter,
-  onDragEnd,
+  onGrab,
+  onDragMove,
+  onDrop,
 }: {
   player: Player;
   index: number;
@@ -689,46 +721,50 @@ function PlayerRow({
   dragging: boolean;
   dropBefore: boolean;
   dropAfter: boolean;
-  onDragStart: () => void;
-  onDragEnter: () => void;
-  onDragEnd: () => void;
+  onGrab: () => void;
+  onDragMove: (clientY: number) => void;
+  onDrop: () => void;
 }) {
-  // Przeciąganie uzbraja dopiero chwyt — inaczej nie dałoby się zaznaczyć tekstu w polu imienia.
-  const [armed, setArmed] = useState(false);
-
   return (
     <div
-      draggable={armed}
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "move";
-        // Firefox nie zacznie przeciągania bez ustawionych danych.
-        e.dataTransfer.setData("text/plain", player.id);
-        onDragStart();
-      }}
-      onDragEnter={onDragEnter}
-      onDragOver={(e) => e.preventDefault()}
-      onDragEnd={() => {
-        setArmed(false);
-        onDragEnd();
-      }}
+      data-player-row
       className={cx(
         "group flex items-center gap-1.5 h-8 rounded transition-colors",
-        dragging && "opacity-40",
+        dragging && "opacity-40 bg-[var(--surface-2)]",
         dropBefore && "border-t-2 border-t-[var(--accent)]",
         dropAfter && "border-b-2 border-b-[var(--accent)]"
       )}
     >
-      <Tooltip content="Przeciągnij, aby zmienić miejsce w kręgu. Kolejność ma znaczenie dla detektora ufoków.">
-        <span
-          onMouseDown={() => setArmed(true)}
-          onMouseUp={() => setArmed(false)}
-          onTouchStart={() => setArmed(true)}
-          className="w-4 shrink-0 text-center text-[13px] leading-none text-[var(--text-faint)] opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
-          aria-label="Uchwyt do przeciągania"
-        >
-          ⠿
-        </span>
-      </Tooltip>
+      {/*
+        Zdarzenia wskaźnika zamiast HTML5 drag-and-drop: tamto nie działa
+        w Safari na iOS ani z Apple Pencilem. `touch-action: none` powstrzymuje
+        przewijanie strony w trakcie przeciągania, a przechwycenie wskaźnika
+        sprawia, że ruch trafia do uchwytu nawet po zjechaniu poza wiersz.
+      */}
+      <span
+        onPointerDown={(e) => {
+          e.preventDefault();
+          e.currentTarget.setPointerCapture(e.pointerId);
+          onGrab();
+        }}
+        onPointerMove={(e) => dragging && onDragMove(e.clientY)}
+        onPointerUp={(e) => {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+          onDrop();
+        }}
+        onPointerCancel={onDrop}
+        style={{ touchAction: "none" }}
+        className={cx(
+          "w-6 h-7 shrink-0 grid place-items-center rounded text-[14px] leading-none",
+          "text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]",
+          "cursor-grab active:cursor-grabbing select-none",
+          HOVER_CONTROLS
+        )}
+        title="Przeciągnij, aby zmienić miejsce w kręgu"
+        aria-label={`Przenieś gracza ${player.name}`}
+      >
+        ⠿
+      </span>
       <span className="w-6 shrink-0 text-center text-[11px] font-mono text-[var(--text-faint)]">
         {index + 1}
       </span>
@@ -737,25 +773,28 @@ function PlayerRow({
         onChange={(e) => onRename(e.target.value)}
         className="flex-1 h-7 px-2 rounded bg-transparent border border-transparent hover:border-[var(--border)] focus:border-[var(--accent)] focus:bg-[var(--surface)] text-[13px] outline-none"
       />
-      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className={cx("flex items-center gap-0.5", HOVER_CONTROLS)}>
         <button
           onClick={() => onMove(index, -1)}
-          className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
+          className="w-7 h-7 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
           title="W górę"
+          aria-label="Przenieś w górę"
         >
           ↑
         </button>
         <button
           onClick={() => onMove(index, 1)}
-          className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
+          className="w-7 h-7 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
           title="W dół"
+          aria-label="Przenieś w dół"
         >
           ↓
         </button>
         <button
           onClick={onRemove}
-          className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--danger)] hover:bg-[var(--danger-soft)]"
+          className="w-7 h-7 rounded text-[var(--text-faint)] hover:text-[var(--danger)] hover:bg-[var(--danger-soft)]"
           title="Usuń"
+          aria-label="Usuń gracza"
         >
           ×
         </button>

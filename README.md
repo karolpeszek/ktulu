@@ -82,7 +82,9 @@ gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
 
 **Przygotowanie (`/`)**
 - lista graczy (pojedynczo lub wklejona hurtem), kolejność = kolejność w kręgu — istotna dla
-  detektora ufoków; kolejność zmienia się przeciąganiem za uchwyt albo strzałkami,
+  detektora ufoków; kolejność zmienia się przeciąganiem gracza po łuku diagramu, przeciąganiem za
+  uchwyt przy liście albo strzałkami. Przeciąganie działa na zdarzeniach wskaźnika, więc obsługuje
+  mysz, dotyk i Apple Pencil; sterowanie jest widoczne bez najeżdżania tam, gdzie nie ma `hover`,
 - skład frakcji z tabeli Xięgi dla 12–30 graczy (3 lub 4 frakcje), z ręczną korektą,
 - wybór kart: ręcznie albo automatycznie (kluczowe → tradycyjne → opcjonalne → kontrowersyjne,
   reszta to szeregowi członkowie frakcji),

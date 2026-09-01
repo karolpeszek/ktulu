@@ -17,6 +17,8 @@ export interface SeatFlags {
 
 interface Props {
   state: GameState;
+  /** Pozwala zmieniać kolejność w kręgu, przeciągając graczy po łuku. */
+  onReorder?: (from: number, to: number) => void;
   /** Ukryj przynależność frakcyjną (widok „bezpieczny”, gdy ktoś patrzy przez ramię). */
   hideRoles?: boolean;
   selected?: string | null;
@@ -32,9 +34,13 @@ export default function SeatArc({
   selected,
   disabledIds = [],
   onSelect,
+  onReorder,
   flags = {},
   compact = false,
 }: Props) {
+  const svgRef = React.useRef<SVGSVGElement>(null);
+  const [dragFrom, setDragFrom] = React.useState<number | null>(null);
+  const [dragTo, setDragTo] = React.useState<number | null>(null);
   const players = [...state.players].sort((a, b) => a.seat - b.seat);
   const n = players.length;
   const W = 1000;
@@ -63,8 +69,43 @@ export default function SeatArc({
   const arcStart = pt(180 - pad, R);
   const arcEnd = pt(pad, R);
 
+  /** Odwrotność `angleOf` — miejsce w kręgu najbliższe podanemu punktowi. */
+  const seatAt = (clientX: number, clientY: number): number | null => {
+    const svg = svgRef.current;
+    if (!svg || n < 2) return null;
+    const r = svg.getBoundingClientRect();
+    const scale = W / r.width;
+    const x = (clientX - r.left) * scale;
+    const y = (clientY - r.top) * scale;
+    const deg = (Math.atan2(cyPt - y, x - cxPt) * 180) / Math.PI;
+    const raw = ((180 - pad - deg) * (n - 1)) / (180 - 2 * pad);
+    return Math.max(0, Math.min(n - 1, Math.round(raw)));
+  };
+
+  const endDrag = () => {
+    if (dragFrom !== null && dragTo !== null && dragFrom !== dragTo) {
+      onReorder?.(dragFrom, dragTo);
+    }
+    setDragFrom(null);
+    setDragTo(null);
+  };
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto select-none" role="img">
+    <svg
+      ref={svgRef}
+      viewBox={`0 0 ${W} ${H}`}
+      className="w-full h-auto select-none"
+      role="img"
+      onPointerMove={(e) => {
+        if (dragFrom === null) return;
+        const to = seatAt(e.clientX, e.clientY);
+        if (to !== null) setDragTo(to);
+      }}
+      // Bez `onPointerLeave` — przy przechwyconym wskaźniku zdarzenia brzegowe
+      // potrafią paść w środku przeciągania i przerwać je przedwcześnie.
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+    >
       <path
         d={`M ${arcStart.x} ${arcStart.y} A ${R} ${R} 0 0 1 ${arcEnd.x} ${arcEnd.y}`}
         fill="none"
@@ -130,11 +171,38 @@ export default function SeatArc({
         return (
           <g
             key={p.id}
-            className={cx(onSelect && !disabled && "cursor-pointer")}
-            opacity={disabled ? 0.35 : 1}
+            className={cx(
+              onSelect && !disabled && "cursor-pointer",
+              onReorder && (dragFrom === i ? "cursor-grabbing" : "cursor-grab")
+            )}
+            style={onReorder ? { touchAction: "none" } : undefined}
+            opacity={disabled ? 0.35 : dragFrom === i ? 0.45 : 1}
             onClick={() => !disabled && onSelect?.(p.id)}
+            onPointerDown={
+              onReorder
+                ? (e) => {
+                    // Przechwycenie wskaźnika trzyma ruch przy SVG, także gdy
+                    // palec albo rysik zjedzie poza żeton.
+                    e.preventDefault();
+                    svgRef.current?.setPointerCapture(e.pointerId);
+                    setDragFrom(i);
+                    setDragTo(i);
+                  }
+                : undefined
+            }
           >
             <title>{tip}</title>
+            {onReorder && dragTo === i && dragFrom !== null && dragFrom !== i && (
+              <circle
+                cx={c.x}
+                cy={c.y}
+                r={nodeR + 9}
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth={2}
+                strokeDasharray="4 3"
+              />
+            )}
             {(isSel || isHi) && (
               <circle
                 cx={c.x}
