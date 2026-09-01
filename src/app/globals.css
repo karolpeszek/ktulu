@@ -21,16 +21,19 @@
   --accent-soft: #e6f0ff;
   --accent-text: #ffffff;
 
-  --city: #0b74d1;
-  --city-soft: #e4f0fb;
-  --bandit: #c8760c;
-  --bandit-soft: #fbf0dd;
-  --indian: #c0392b;
-  --indian-soft: #fbe8e5;
-  --ufo: #0f9b7a;
-  --ufo-soft: #e0f5ef;
-  --janosik: #6d4bc4;
-  --janosik-soft: #eee9fa;
+  /* Frakcje w palecie prędkości portów UniFi: 2,5 Gb/s niebieski, 100 Mb/s
+     bursztynowy, 10 Mb/s czerwony, 1 Gb/s zielony, 10 Gb/s fioletowy.
+     W jasnym motywie odcienie są przyciemnione, żeby tekst zachował kontrast. */
+  --city: #0559c9;
+  --city-soft: #e4eefc;
+  --bandit: #9d6207;
+  --bandit-soft: #fbf1dc;
+  --indian: #d22e32;
+  --indian-soft: #fbe7e7;
+  --ufo: #127f50;
+  --ufo-soft: #e1f4ea;
+  --janosik: #6f45d6;
+  --janosik-soft: #eee9fb;
 
   --danger: #d13b30;
   --danger-soft: #fbe9e7;
@@ -55,14 +58,15 @@
     --accent-soft: #16233a;
     --accent-text: #06121f;
 
-    --city: #4aa3f0;
-    --city-soft: #142434;
-    --bandit: #e0a04a;
-    --bandit-soft: #2c2314;
-    --indian: #ee7264;
-    --indian-soft: #2f1a17;
-    --ufo: #3fc9a5;
-    --ufo-soft: #122a25;
+    /* Na ciemnym tle odcienie UniFi wchodzą bez przyciemniania. */
+    --city: #4a9bff;
+    --city-soft: #132234;
+    --bandit: #f5a623;
+    --bandit-soft: #2c2313;
+    --indian: #ff6b6e;
+    --indian-soft: #301819;
+    --ufo: #3ecd86;
+    --ufo-soft: #12291f;
     --janosik: #a98cf5;
     --janosik-soft: #211b33;
 
@@ -343,5 +347,20 @@ body {
   .cheat th {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+}
+
+/* Płynne przestawianie graczy w kręgu — pozycje żetonów i podpisów są
+   transformacjami, więc zmiana miejsca przesuwa je po ekranie zamiast
+   przeskakiwać. Przy `prefers-reduced-motion` ruch znika. */
+.seat-node,
+.seat-label {
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seat-node,
+  .seat-label {
+    transition: none;
   }
 }

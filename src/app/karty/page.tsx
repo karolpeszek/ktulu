@@ -8,12 +8,13 @@ import { ROLE_BY_ID } from "@/lib/roles";
 import { shuffle } from "@/lib/setup";
 import { Badge, Button, Card, Empty, Toggle, cx } from "@/components/ui";
 
+/** Odpowiedniki kolorów frakcji na papierze — wersje z jasnego motywu. */
 const PRINT_COLOR: Record<Faction, string> = {
-  miasto: "#0b74d1",
-  bandyci: "#b06a08",
-  indianie: "#b8382b",
-  ufoki: "#0d8a6c",
-  janosik: "#6d4bc4",
+  miasto: "#0559c9",
+  bandyci: "#9d6207",
+  indianie: "#c92a2e",
+  ufoki: "#127f50",
+  janosik: "#6f45d6",
 };
 
 const NIGHT_LABEL: Record<string, string> = {

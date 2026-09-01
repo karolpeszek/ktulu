@@ -41,6 +41,8 @@ export default function SeatArc({
   const svgRef = React.useRef<SVGSVGElement>(null);
   const [dragFrom, setDragFrom] = React.useState<number | null>(null);
   const [dragTo, setDragTo] = React.useState<number | null>(null);
+  const [hover, setHover] = React.useState<{ i: number; x: number; y: number } | null>(null);
+
   const players = [...state.players].sort((a, b) => a.seat - b.seat);
   const n = players.length;
   const W = 1000;
@@ -69,6 +71,19 @@ export default function SeatArc({
   const arcStart = pt(180 - pad, R);
   const arcEnd = pt(pad, R);
 
+  /**
+   * Miejsce, które zajmuje każdy gracz w tym renderze. W trakcie przeciągania
+   * jest to układ po upuszczeniu — reszta graczy rozsuwa się na podgląd, a że
+   * pozycje są animowane, robi to płynnie.
+   */
+  const slotOf = players.map((_, i) => i);
+  if (dragFrom !== null && dragTo !== null && dragFrom !== dragTo) {
+    const arr = players.map((_, i) => i);
+    const [moved] = arr.splice(dragFrom, 1);
+    arr.splice(dragTo, 0, moved);
+    arr.forEach((playerIndex, slot) => (slotOf[playerIndex] = slot));
+  }
+
   /** Odwrotność `angleOf` — miejsce w kręgu najbliższe podanemu punktowi. */
   const seatAt = (clientX: number, clientY: number): number | null => {
     const svg = svgRef.current;
@@ -90,226 +105,267 @@ export default function SeatArc({
     setDragTo(null);
   };
 
+  const hovered = hover ? players[hover.i] : null;
+  const hoveredRole = hovered?.roleId ? ROLE_BY_ID[hovered.roleId] : null;
+
   return (
-    <svg
-      ref={svgRef}
-      viewBox={`0 0 ${W} ${H}`}
-      className="w-full h-auto select-none"
-      role="img"
-      onPointerMove={(e) => {
-        if (dragFrom === null) return;
-        const to = seatAt(e.clientX, e.clientY);
-        if (to !== null) setDragTo(to);
-      }}
-      // Bez `onPointerLeave` — przy przechwyconym wskaźniku zdarzenia brzegowe
-      // potrafią paść w środku przeciągania i przerwać je przedwcześnie.
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-    >
-      <path
-        d={`M ${arcStart.x} ${arcStart.y} A ${R} ${R} 0 0 1 ${arcEnd.x} ${arcEnd.y}`}
-        fill="none"
-        stroke="var(--border)"
-        strokeWidth={1.5}
-      />
-      <text
-        x={cxPt}
-        y={cyPt - 8}
-        textAnchor="middle"
-        fontSize={12}
-        fill="var(--text-faint)"
-        letterSpacing="0.12em"
+    <div className="relative">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full h-auto select-none overflow-visible"
+        role="img"
+        onPointerMove={(e) => {
+          if (dragFrom === null) return;
+          const to = seatAt(e.clientX, e.clientY);
+          if (to !== null) setDragTo(to);
+        }}
+        // Bez `onPointerLeave` — przy przechwyconym wskaźniku zdarzenia brzegowe
+        // potrafią paść w środku przeciągania i przerwać je przedwcześnie.
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
       >
-        RADA MIASTA BUM-BUM CITY
-      </text>
-      <text
-        x={cxPt}
-        y={cyPt + 14}
-        textAnchor="middle"
-        fontSize={22}
-        fontWeight={600}
-        fill="var(--text)"
-      >
-        {players.filter((p) => p.alive).length}
-        <tspan fill="var(--text-faint)" fontSize={14}>
-          {` / ${n} żywych`}
-        </tspan>
-      </text>
+        <path
+          d={`M ${arcStart.x} ${arcStart.y} A ${R} ${R} 0 0 1 ${arcEnd.x} ${arcEnd.y}`}
+          fill="none"
+          stroke="var(--border)"
+          strokeWidth={1.5}
+        />
+        <text
+          x={cxPt}
+          y={cyPt - 8}
+          textAnchor="middle"
+          fontSize={12}
+          fill="var(--text-faint)"
+          letterSpacing="0.12em"
+        >
+          RADA MIASTA BUM-BUM CITY
+        </text>
+        <text
+          x={cxPt}
+          y={cyPt + 14}
+          textAnchor="middle"
+          fontSize={22}
+          fontWeight={600}
+          fill="var(--text)"
+        >
+          {players.filter((p) => p.alive).length}
+          <tspan fill="var(--text-faint)" fontSize={14}>
+            {` / ${n} żywych`}
+          </tspan>
+        </text>
 
-      {players.map((p, i) => {
-        const deg = angleOf(i);
-        const c = pt(deg, R);
-        const role = p.roleId ? ROLE_BY_ID[p.roleId] : null;
-        const color = hideRoles || !role ? "var(--text-faint)" : FACTION_COLOR[role.faction];
-        const dead = !p.alive;
-        const isSel = selected === p.id;
-        const disabled = disabledIds.includes(p.id);
-        const flat = deg > 90;
-        const l = pt(deg, R + nodeR + 8);
-        const rot = flat ? 180 - deg : -deg;
-        const hasIdol = flags.idol === p.id;
-        const isJailed = flags.jailed === p.id;
-        const isGuarded = flags.guarded === p.id;
-        const isAsleep = flags.asleep?.includes(p.id);
-        const isPoisoned = flags.poisoned === p.id;
-        const isHi = flags.highlight?.includes(p.id);
+        {players.map((p, i) => {
+          const slot = slotOf[i];
+          const deg = angleOf(slot);
+          const c = pt(deg, R);
+          const role = p.roleId ? ROLE_BY_ID[p.roleId] : null;
+          const color = hideRoles || !role ? "var(--text-faint)" : FACTION_COLOR[role.faction];
+          const dead = !p.alive;
+          const isSel = selected === p.id;
+          const disabled = disabledIds.includes(p.id);
+          const flat = deg > 90;
+          const rot = flat ? 180 - deg : -deg;
+          const labelR = nodeR + 8;
+          const lx = labelR * Math.cos((deg * Math.PI) / 180);
+          const ly = -labelR * Math.sin((deg * Math.PI) / 180);
+          const hasIdol = flags.idol === p.id;
+          const isJailed = flags.jailed === p.id;
+          const isGuarded = flags.guarded === p.id;
+          const isAsleep = flags.asleep?.includes(p.id);
+          const isPoisoned = flags.poisoned === p.id;
+          const isHi = flags.highlight?.includes(p.id);
+          const isDragged = dragFrom === i;
 
-        const tip = [
-          `${p.seat + 1}. ${p.name}`,
-          hideRoles || !role ? null : `${role.name} — ${FACTION_LABEL[role.faction]}`,
-          dead ? `† ${p.deathPhase ?? "nie żyje"}${p.deathNote ? `: ${p.deathNote}` : ""}` : null,
-          hasIdol && !hideRoles ? "Ma posążek" : null,
-          isJailed ? "W więzieniu — nie budzi się i nie może zginąć" : null,
-          isGuarded ? "Chroniony przez ochroniarza" : null,
-          isAsleep && !isJailed ? "Nieaktywny tej nocy — nie budzi się" : null,
-          isPoisoned ? "Otruty — zginie następnego dnia" : null,
-          disabled ? "Nie można wskazać" : null,
-        ]
-          .filter(Boolean)
-          .join("\n");
+          const track = (e: React.PointerEvent) => {
+            // Rysik i mysz zgłaszają najechanie przez zdarzenia wskaźnika;
+            // natywny `title` w SVG nie pokazuje się w Safari na iPadzie.
+            if (dragFrom !== null) return;
+            setHover({ i, x: e.clientX, y: e.clientY });
+          };
 
-        return (
-          <g
-            key={p.id}
-            className={cx(
-              onSelect && !disabled && "cursor-pointer",
-              onReorder && (dragFrom === i ? "cursor-grabbing" : "cursor-grab")
-            )}
-            style={onReorder ? { touchAction: "none" } : undefined}
-            opacity={disabled ? 0.35 : dragFrom === i ? 0.45 : 1}
-            onClick={() => !disabled && onSelect?.(p.id)}
-            onPointerDown={
-              onReorder
-                ? (e) => {
-                    // Przechwycenie wskaźnika trzyma ruch przy SVG, także gdy
-                    // palec albo rysik zjedzie poza żeton.
-                    e.preventDefault();
-                    svgRef.current?.setPointerCapture(e.pointerId);
-                    setDragFrom(i);
-                    setDragTo(i);
-                  }
-                : undefined
-            }
-          >
-            <title>{tip}</title>
-            {onReorder && dragTo === i && dragFrom !== null && dragFrom !== i && (
-              <circle
-                cx={c.x}
-                cy={c.y}
-                r={nodeR + 9}
-                fill="none"
-                stroke="var(--accent)"
-                strokeWidth={2}
-                strokeDasharray="4 3"
-              />
-            )}
-            {(isSel || isHi) && (
-              <circle
-                cx={c.x}
-                cy={c.y}
-                r={nodeR + 6}
-                fill="none"
-                stroke={isSel ? "var(--accent)" : "var(--warn)"}
-                strokeWidth={2}
-              />
-            )}
-            <circle
-              cx={c.x}
-              cy={c.y}
-              r={nodeR}
-              fill={dead ? "var(--surface-2)" : `color-mix(in srgb, ${color} 16%, var(--surface))`}
-              stroke={dead ? "var(--border-strong)" : color}
-              strokeWidth={dead ? 1 : 1.75}
-              strokeDasharray={isAsleep && !dead ? "3 3" : undefined}
-            />
-            <text
-              x={c.x}
-              y={c.y + 4}
-              textAnchor="middle"
-              fontSize={nodeR - 3}
-              fontWeight={600}
-              fill={dead ? "var(--text-faint)" : color}
+          return (
+            <g
+              key={p.id}
+              className={cx(
+                "seat-node",
+                onSelect && !disabled && "cursor-pointer",
+                onReorder && (isDragged ? "cursor-grabbing" : "cursor-grab")
+              )}
+              style={{
+                transform: `translate(${c.x}px, ${c.y}px)`,
+                touchAction: onReorder ? "none" : undefined,
+              }}
+              opacity={disabled ? 0.35 : isDragged ? 0.55 : 1}
+              onClick={() => !disabled && onSelect?.(p.id)}
+              onPointerEnter={track}
+              onPointerMove={track}
+              onPointerLeave={() => setHover((h) => (h?.i === i ? null : h))}
+              onPointerDown={
+                onReorder
+                  ? (e) => {
+                      // Przechwycenie wskaźnika trzyma ruch przy SVG, także gdy
+                      // palec albo rysik zjedzie poza żeton.
+                      e.preventDefault();
+                      setHover(null);
+                      svgRef.current?.setPointerCapture(e.pointerId);
+                      setDragFrom(i);
+                      setDragTo(i);
+                    }
+                  : undefined
+              }
             >
-              {p.seat + 1}
-            </text>
-            {dead && (
-              <path
-                d={`M ${c.x - nodeR * 0.6} ${c.y - nodeR * 0.6} L ${c.x + nodeR * 0.6} ${
-                  c.y + nodeR * 0.6
-                } M ${c.x + nodeR * 0.6} ${c.y - nodeR * 0.6} L ${c.x - nodeR * 0.6} ${
-                  c.y + nodeR * 0.6
-                }`}
-                stroke="var(--text-faint)"
-                strokeWidth={1.5}
-              />
-            )}
-            {hasIdol && !hideRoles && (
+              {isDragged && (
+                <circle
+                  r={nodeR + 9}
+                  fill="none"
+                  stroke="var(--accent)"
+                  strokeWidth={2}
+                  strokeDasharray="4 3"
+                />
+              )}
+              {(isSel || isHi) && (
+                <circle
+                  r={nodeR + 6}
+                  fill="none"
+                  stroke={isSel ? "var(--accent)" : "var(--warn)"}
+                  strokeWidth={2}
+                />
+              )}
               <circle
-                cx={c.x + nodeR * 0.8}
-                cy={c.y - nodeR * 0.8}
-                r={5}
-                fill="var(--warn)"
-                stroke="var(--surface)"
-                strokeWidth={1.5}
+                r={nodeR}
+                fill={dead ? "var(--surface-2)" : `color-mix(in srgb, ${color} 16%, var(--surface))`}
+                stroke={dead ? "var(--border-strong)" : color}
+                strokeWidth={dead ? 1 : 1.75}
+                strokeDasharray={isAsleep && !dead ? "3 3" : undefined}
               />
-            )}
-            {isJailed && (
-              <rect
-                x={c.x - nodeR * 0.9}
-                y={c.y + nodeR - 2}
-                width={nodeR * 1.8}
-                height={3}
-                fill="var(--text-dim)"
-              />
-            )}
-            {isGuarded && (
-              <circle
-                cx={c.x}
-                cy={c.y}
-                r={nodeR + 3}
-                fill="none"
-                stroke="var(--ok)"
-                strokeWidth={1.5}
-                strokeDasharray="2 3"
-              />
-            )}
-            {isPoisoned && (
-              <circle
-                cx={c.x - nodeR * 0.8}
-                cy={c.y - nodeR * 0.8}
-                r={4.5}
-                fill="var(--ok)"
-                stroke="var(--surface)"
-                strokeWidth={1.5}
-              />
-            )}
-            <g transform={`translate(${l.x} ${l.y}) rotate(${rot})`}>
               <text
-                textAnchor={flat ? "end" : "start"}
-                fontSize={n > 22 ? 10 : 11}
-                fontWeight={500}
-                fill={dead ? "var(--text-faint)" : "var(--text)"}
-                dy={3}
-                style={dead ? { textDecoration: "line-through" } : undefined}
+                y={4}
+                textAnchor="middle"
+                fontSize={nodeR - 3}
+                fontWeight={600}
+                fill={dead ? "var(--text-faint)" : color}
               >
-                {p.name}
+                {slot + 1}
               </text>
-              {!hideRoles && role && (
+              {dead && (
+                <path
+                  d={`M ${-nodeR * 0.6} ${-nodeR * 0.6} L ${nodeR * 0.6} ${nodeR * 0.6} M ${
+                    nodeR * 0.6
+                  } ${-nodeR * 0.6} L ${-nodeR * 0.6} ${nodeR * 0.6}`}
+                  stroke="var(--text-faint)"
+                  strokeWidth={1.5}
+                />
+              )}
+              {hasIdol && !hideRoles && (
+                <circle
+                  cx={nodeR * 0.8}
+                  cy={-nodeR * 0.8}
+                  r={5}
+                  fill="var(--warn)"
+                  stroke="var(--surface)"
+                  strokeWidth={1.5}
+                />
+              )}
+              {isJailed && (
+                <rect
+                  x={-nodeR * 0.9}
+                  y={nodeR - 2}
+                  width={nodeR * 1.8}
+                  height={3}
+                  fill="var(--text-dim)"
+                />
+              )}
+              {isGuarded && (
+                <circle
+                  r={nodeR + 3}
+                  fill="none"
+                  stroke="var(--ok)"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 3"
+                />
+              )}
+              {isPoisoned && (
+                <circle
+                  cx={-nodeR * 0.8}
+                  cy={-nodeR * 0.8}
+                  r={4.5}
+                  fill="var(--ok)"
+                  stroke="var(--surface)"
+                  strokeWidth={1.5}
+                />
+              )}
+              <g className="seat-label" style={{ transform: `translate(${lx}px, ${ly}px) rotate(${rot}deg)` }}>
                 <text
                   textAnchor={flat ? "end" : "start"}
-                  fontSize={9}
-                  fill={color}
-                  dy={14}
-                  opacity={dead ? 0.5 : 0.9}
+                  fontSize={n > 22 ? 10 : 11}
+                  fontWeight={500}
+                  fill={dead ? "var(--text-faint)" : "var(--text)"}
+                  dy={3}
+                  style={dead ? { textDecoration: "line-through" } : undefined}
                 >
-                  {role.name}
+                  {p.name}
                 </text>
-              )}
+                {!hideRoles && role && (
+                  <text
+                    textAnchor={flat ? "end" : "start"}
+                    fontSize={9}
+                    fill={color}
+                    dy={14}
+                    opacity={dead ? 0.5 : 0.9}
+                  >
+                    {role.name}
+                  </text>
+                )}
+              </g>
             </g>
-          </g>
-        );
-      })}
-    </svg>
+          );
+        })}
+      </svg>
+
+      {hover && hovered && (
+        <div
+          role="tooltip"
+          className="fixed z-50 pointer-events-none max-w-[280px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2.5 py-2 text-[12px] leading-relaxed shadow-lg anim-fade-up"
+          style={{ left: hover.x, top: hover.y - 14, transform: "translate(-50%, -100%)" }}
+        >
+          <div className="font-semibold">
+            {slotOf[hover.i] + 1}. {hovered.name}
+          </div>
+          {hideRoles || !hoveredRole ? (
+            <div className="text-[var(--text-dim)] mt-0.5">Karta ukryta w trybie bezpiecznym.</div>
+          ) : (
+            <>
+              <div className="mt-0.5" style={{ color: FACTION_COLOR[hoveredRole.faction] }}>
+                {hoveredRole.name} — {FACTION_LABEL[hoveredRole.faction]}
+              </div>
+              <div className="text-[var(--text-dim)] mt-1">{hoveredRole.desc}</div>
+            </>
+          )}
+          {!hovered.alive && (
+            <div className="text-[var(--text-dim)] mt-1">
+              † {hovered.deathPhase}
+              {hovered.deathNote ? ` — ${hovered.deathNote}` : ""}
+            </div>
+          )}
+          {(() => {
+            const st = [
+              flags.idol === hovered.id && !hideRoles && "ma posążek",
+              flags.jailed === hovered.id && "w więzieniu — nie budzi się i nie może zginąć",
+              flags.guarded === hovered.id && "chroniony przez ochroniarza",
+              flags.poisoned === hovered.id && !hideRoles && "otruty — zginie następnego dnia",
+              flags.asleep?.includes(hovered.id) &&
+                flags.jailed !== hovered.id &&
+                "nieaktywny tej nocy",
+              disabledIds.includes(hovered.id) && "nie można wskazać",
+            ].filter(Boolean);
+            return st.length ? (
+              <div className="text-[var(--text-dim)] mt-1">{st.join(" · ")}</div>
+            ) : null;
+          })()}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -329,7 +385,7 @@ export function SeatLegend({ hideRoles = false }: { hideRoles?: boolean }) {
         </span>
       ),
       label: "kolor = frakcja",
-      tip: "Obwódka i podpis pod imieniem mają kolor frakcji: miasto, bandyci, Indianie, ufoki, Janosik. W trybie „ukryj karty” wszyscy są szarzy.",
+      tip: "Obwódka i podpis pod imieniem mają kolor frakcji: miasto (niebieski), bandyci (bursztynowy), Indianie (czerwony), ufoki (zielony), Janosik (fioletowy). W trybie „ukryj karty” wszyscy są szarzy.",
     },
     {
       swatch: <Swatch><circle cx="11" cy="11" r="8" fill="none" stroke="var(--warn)" strokeWidth="1.5" /><circle cx="17" cy="5" r="4" fill="var(--warn)" /></Swatch>,
