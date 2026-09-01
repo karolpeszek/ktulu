@@ -47,6 +47,13 @@ export default function SetupPage() {
   const [dragOver, setDragOver] = useState<number | null>(null);
   const [rowPitch, setRowPitch] = useState(36);
   const listRef = useRef<HTMLDivElement>(null);
+  /**
+   * Geometria listy zapamiętana w chwili chwycenia. W trakcie przeciągania
+   * wiersze są poprzesuwane transformacjami, więc mierzenie ich na bieżąco
+   * zwracałoby pozycje podglądu — cel liczyłby się z tego, co sam przed chwilą
+   * ustawił, i lista skakała.
+   */
+  const dragGeom = useRef<{ top: number; pitch: number; count: number } | null>(null);
 
   /**
    * Miejsce, jakie wiersz zajmie po upuszczeniu. W trakcie przeciągania reszta
@@ -59,25 +66,25 @@ export default function SetupPage() {
     return i >= dragOver && i < dragFrom ? i + 1 : i;
   };
 
-  /** Odstęp między wierszami — potrzebny, żeby przesuwać je płynnie. */
-  const measurePitch = () => {
+  /** Zapamiętuje układ listy przed pierwszym przesunięciem wierszy. */
+  const captureGeometry = () => {
     const rows = listRef.current?.querySelectorAll("[data-player-row]");
-    if (!rows || rows.length < 2) return;
-    const a = rows[0].getBoundingClientRect();
-    const b = rows[1].getBoundingClientRect();
-    const pitch = b.top - a.top;
-    if (pitch > 0) setRowPitch(pitch);
+    if (!rows?.length) return;
+    const first = rows[0].getBoundingClientRect();
+    const pitch =
+      rows.length > 1 ? rows[1].getBoundingClientRect().top - first.top : first.height;
+    if (pitch > 0) {
+      dragGeom.current = { top: first.top, pitch, count: rows.length };
+      setRowPitch(pitch);
+    }
   };
 
-  /** Który wiersz listy znajduje się pod podanym Y wskaźnika. */
+  /** Który wiersz listy odpowiada podanemu Y — z geometrii sprzed przeciągania. */
   const rowIndexAt = (clientY: number): number | null => {
-    const rows = listRef.current?.querySelectorAll("[data-player-row]");
-    if (!rows?.length) return null;
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i].getBoundingClientRect();
-      if (clientY < r.bottom) return i;
-    }
-    return rows.length - 1;
+    const g = dragGeom.current;
+    if (!g) return null;
+    const i = Math.floor((clientY - g.top) / g.pitch);
+    return Math.max(0, Math.min(g.count - 1, i));
   };
 
   const players = state.players;
@@ -288,7 +295,7 @@ export default function SetupPage() {
                     offset={(previewSlot(i) - i) * rowPitch}
                     slot={previewSlot(i)}
                     onGrab={() => {
-                      measurePitch();
+                      captureGeometry();
                       setDragFrom(i);
                       setDragOver(i);
                     }}
@@ -298,6 +305,7 @@ export default function SetupPage() {
                     }}
                     onDrop={() => {
                       if (dragFrom !== null && dragOver !== null) reorder(dragFrom, dragOver);
+                      dragGeom.current = null;
                       setDragFrom(null);
                       setDragOver(null);
                     }}
@@ -753,6 +761,10 @@ function PlayerRow({
   onDragMove: (clientY: number) => void;
   onDrop: () => void;
 }) {
+  // Stan „trzymam” w refie, nie w propsie: pierwsze ruchy padają zanim React
+  // zdąży przerenderować wiersz, a bez nich pierwsze przeciągnięcie szarpało.
+  const grabbed = useRef(false);
+
   return (
     <div
       data-player-row
@@ -776,15 +788,24 @@ function PlayerRow({
         onPointerDown={(e) => {
           e.preventDefault();
           e.currentTarget.setPointerCapture(e.pointerId);
+          grabbed.current = true;
           onGrab();
         }}
-        onPointerMove={(e) => dragging && onDragMove(e.clientY)}
+        onPointerMove={(e) => {
+          if (grabbed.current) onDragMove(e.clientY);
+        }}
         onPointerUp={(e) => {
           e.currentTarget.releasePointerCapture(e.pointerId);
+          grabbed.current = false;
           onDrop();
         }}
-        onPointerCancel={onDrop}
-        style={{ touchAction: "none" }}
+        onPointerCancel={() => {
+          grabbed.current = false;
+          onDrop();
+        }}
+        // Uchwyt normalnie wychodzi po najechaniu, ale w trakcie przeciągania
+        // wiersz ucieka spod kursora i `:hover` znika razem z nim.
+        style={{ touchAction: "none", opacity: dragging ? 1 : undefined }}
         className={cx(
           "ui-grip w-6 h-7 shrink-0 grid place-items-center rounded text-[14px] leading-none",
           "text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]",
