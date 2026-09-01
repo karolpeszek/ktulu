@@ -13,8 +13,9 @@ export function emptyState(): GameState {
   return {
     version: 1,
     setup: {
-      counts: { miasto: 0, bandyci: 0, indianie: 0, ufoki: 0 },
-      picked: { miasto: [], bandyci: [], indianie: [], ufoki: [] },
+      withJanosik: false,
+      counts: { miasto: 0, bandyci: 0, indianie: 0, ufoki: 0, janosik: 0 },
+      picked: { miasto: [], bandyci: [], indianie: [], ufoki: [], janosik: [] },
       autofill: true,
       manualCounts: false,
       manualSettings: false,
@@ -386,12 +387,12 @@ export function nightSteps(s: GameState): NightStep[] {
       push({
         id: "janosik",
         action: "janosik",
-        faction: "miasto",
+        faction: "janosik",
         roleId: "janosik",
         title: "Janosik",
         script: "Budzi się Janosik. Czy machasz ciupagą?",
         detail:
-          "Raz w grze, w tajemnicy. Gdy Janosik zamacha ciupagą — wszyscy się cieszą. Nie wpływa to na warunki zwycięstwa.",
+          "Raz w grze, w tajemnicy. Gdy Janosik zamacha ciupagą — wszyscy się cieszą. Nie wpływa to na warunki zwycięstwa. Janosik jest osobną frakcją i budzi się po mieście, przed bandytami.",
         select: "yesno",
         optional: true,
         secret: true,

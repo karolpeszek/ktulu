@@ -29,6 +29,8 @@
   --indian-soft: #fbe8e5;
   --ufo: #0f9b7a;
   --ufo-soft: #e0f5ef;
+  --janosik: #6d4bc4;
+  --janosik-soft: #eee9fa;
 
   --danger: #d13b30;
   --danger-soft: #fbe9e7;
@@ -61,6 +63,8 @@
     --indian-soft: #2f1a17;
     --ufo: #3fc9a5;
     --ufo-soft: #122a25;
+    --janosik: #a98cf5;
+    --janosik-soft: #211b33;
 
     --danger: #f0796b;
     --danger-soft: #2e1a17;
@@ -87,6 +91,7 @@
   --color-bandit: var(--bandit);
   --color-indian: var(--indian);
   --color-ufo: var(--ufo);
+  --color-janosik: var(--janosik);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-ok: var(--ok);

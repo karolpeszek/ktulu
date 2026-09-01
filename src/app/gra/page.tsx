@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useGame } from "@/lib/store";
-import { FACTION_LABEL, Faction } from "@/lib/types";
+import { FACTION_LABEL } from "@/lib/types";
 import { ROLE_BY_ID } from "@/lib/roles";
 import { startNight } from "@/lib/resolve";
 import { Badge, Button, Card, Empty, FACTION_COLOR, cx } from "@/components/ui";
@@ -82,15 +82,14 @@ export default function GamePage() {
 function EndPanel() {
   const { state, set, reset } = useGame();
   const w = state.winner;
-    const color =
-      w && w !== "janosik" ? FACTION_COLOR[w as Faction] : w === "janosik" ? "var(--warn)" : "var(--text-dim)";
+  const color = w ? FACTION_COLOR[w] : "var(--text-dim)";
     return (
       <div className="flex flex-col gap-4">
         <Card accent={color}>
           <div className="text-center py-6">
             <div className="label-xs mb-2">Koniec gry</div>
             <h1 className="text-[30px] font-semibold tracking-tight" style={{ color }}>
-              {w === "janosik" ? "Wygrywa Janosik" : w ? `Wygrywa: ${FACTION_LABEL[w as Faction]}` : "Gra zakończona"}
+              {w ? `Wygrywa: ${FACTION_LABEL[w]}` : "Gra zakończona"}
             </h1>
             <p className="mt-3 text-[14px] text-[var(--text-dim)] max-w-xl mx-auto leading-relaxed">
               {state.winReason}

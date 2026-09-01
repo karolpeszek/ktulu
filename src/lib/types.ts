@@ -1,12 +1,16 @@
-export type Faction = "miasto" | "bandyci" | "indianie" | "ufoki";
+export type Faction = "miasto" | "bandyci" | "indianie" | "ufoki" | "janosik";
 
-export const FACTIONS: Faction[] = ["miasto", "bandyci", "indianie", "ufoki"];
+export const FACTIONS: Faction[] = ["miasto", "bandyci", "indianie", "ufoki", "janosik"];
+
+/** Frakcje z tabeli Xięgi — bez dodatku domowego, którym jest Janosik. */
+export const BOOK_FACTIONS: Faction[] = ["miasto", "bandyci", "indianie", "ufoki"];
 
 export const FACTION_LABEL: Record<Faction, string> = {
   miasto: "Miasto",
   bandyci: "Bandyci",
   indianie: "Indianie",
   ufoki: "Ufoki",
+  janosik: "Janosik",
 };
 
 export const FACTION_GOAL: Record<Faction, string> = {
@@ -14,6 +18,7 @@ export const FACTION_GOAL: Record<Faction, string> = {
   bandyci: "Odpłynąć do Europy z posążkiem.",
   indianie: "Wybić wszystkich pozostałych graczy.",
   ufoki: "Trzykrotnie nadać sygnał posążkiem na macierzystą planetę.",
+  janosik: "Dać się powiesić radzie miasta — wtedy wygrywa sam, a wszyscy pozostali przegrywają.",
 };
 
 /** Kategoria wg „Omówienia postaci" w Xiędze. */
@@ -59,7 +64,7 @@ export interface EventEntry {
   ts: number;
 }
 
-export type Winner = Faction | "janosik" | null;
+export type Winner = Faction | null;
 
 export interface Settings {
   /** Ile osób miasto przeszukuje na koniec dnia. */
@@ -74,6 +79,8 @@ export interface Settings {
 }
 
 export interface SetupConfig {
+  /** Czy w grze bierze udział Janosik (dodatek domowy, od 13 graczy). */
+  withJanosik: boolean;
   counts: Record<Faction, number>;
   picked: Record<Faction, string[]>;
   autofill: boolean;

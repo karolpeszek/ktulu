@@ -12,6 +12,8 @@ import {
   buildPool,
   recommendationFor,
   shuffle,
+  JANOSIK_MIN_PLAYERS,
+  janosikAllowed,
   suggestedCounts,
   syncRecommended,
   totalOf,
@@ -32,17 +34,25 @@ export default function SetupPage() {
   const [showBulk, setShowBulk] = useState(false);
 
   const players = state.players;
+  const withJanosik = state.setup.withJanosik;
+  const janosikOk = janosikAllowed(players.length);
   const counts = state.setup.manualCounts
     ? state.setup.counts
-    : suggestedCounts(players.length);
+    : suggestedCounts(players.length, withJanosik);
   const countsTotal = totalOf(counts);
-  const rec = recommendationFor(players.length);
+  const rec = recommendationFor(players.length, withJanosik);
   const settingsMatchBook =
     state.settings.searchCount === rec.searchCount && state.settings.shipNight === rec.shipNight;
   const assigned = players.filter((p) => p.roleId).length;
 
   const pools = useMemo(() => {
-    const out: Record<Faction, string[]> = { miasto: [], bandyci: [], indianie: [], ufoki: [] };
+    const out: Record<Faction, string[]> = {
+      miasto: [],
+      bandyci: [],
+      indianie: [],
+      ufoki: [],
+      janosik: [],
+    };
     for (const f of FACTIONS)
       out[f] = buildPool(f, counts[f], state.setup.picked[f] ?? [], state.setup.autofill);
     return out;
@@ -253,7 +263,7 @@ export default function SetupPage() {
                   </div>
                 )}
                 <dl className="flex flex-col gap-1">
-                  {FACTIONS.map((f) => (
+                  {FACTIONS.filter((f) => f !== "janosik" || rec.counts.janosik > 0).map((f) => (
                     <div key={f} className="flex items-center gap-2 text-[12.5px]">
                       <span
                         className="w-1.5 h-1.5 rounded-full shrink-0"
@@ -321,7 +331,7 @@ export default function SetupPage() {
                 onClick={() =>
                   update((s) => {
                     s.setup.manualCounts = false;
-                    s.setup.counts = suggestedCounts(s.players.length);
+                    s.setup.counts = suggestedCounts(s.players.length, s.setup.withJanosik);
                   })
                 }
               >
@@ -330,14 +340,40 @@ export default function SetupPage() {
             }
           >
             <FactionDonut counts={counts} />
-            <div className="mt-4 flex flex-col gap-2">
-              {FACTIONS.map((f) => (
+
+            <div className="mt-4 px-2.5 py-2 rounded-md border border-[var(--border)] bg-[var(--surface-2)]">
+              <Toggle
+                checked={withJanosik}
+                disabled={!janosikOk}
+                onChange={(v) =>
+                  update((s) => {
+                    s.setup.withJanosik = v;
+                    s.setup.manualCounts = false;
+                    syncRecommended(s);
+                  })
+                }
+                label="Janosik — osobna frakcja"
+              />
+              <p className="mt-1.5 text-[11px] text-[var(--text-faint)] leading-relaxed">
+                {janosikOk
+                  ? `Dodatek domowy. Janosik zajmuje jedno miejsce, a pozostałych ${players.length - 1} graczy dzieli się wg wiersza tabeli Xięgi dla ${players.length - 1} osób.`
+                  : `Wymaga co najmniej ${JANOSIK_MIN_PLAYERS} graczy — po odjęciu jego karty przy stole musi zostać tylu, ilu obejmuje najmniejszy wiersz tabeli Xięgi.`}
+              </p>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-2">
+              {FACTIONS.filter((f) => f !== "janosik" || counts.janosik > 0).map((f) => (
                 <div key={f} className="flex items-center gap-2">
                   <span
                     className="w-1.5 h-6 rounded-sm"
-                    style={{ background: `var(--${f === "miasto" ? "city" : f === "bandyci" ? "bandit" : f === "indianie" ? "indian" : "ufo"})` }}
+                    style={{ background: FACTION_COLOR[f] }}
                   />
                   <span className="flex-1 text-[13px]">{FACTION_LABEL[f]}</span>
+                  {f === "janosik" ? (
+                    <span className="text-[12px] text-[var(--text-faint)] pr-1">
+                      zawsze jeden — steruje przełącznik
+                    </span>
+                  ) : (
                   <div className="flex items-center gap-1">
                     <Button
                       size="sm"
@@ -365,6 +401,7 @@ export default function SetupPage() {
                       +
                     </Button>
                   </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -658,16 +695,9 @@ function FactionRoles({
   pool: string[];
   onToggle: (roleId: string) => void;
 }) {
-  const color =
-    faction === "miasto"
-      ? "var(--city)"
-      : faction === "bandyci"
-        ? "var(--bandit)"
-        : faction === "indianie"
-          ? "var(--indian)"
-          : "var(--ufo)";
+  const color = FACTION_COLOR[faction];
   const filler = fillerRole(faction);
-  const fillerCount = pool.filter((r) => r === filler.id).length;
+  const fillerCount = filler ? pool.filter((r) => r === filler.id).length : 0;
   const list = ROLES.filter((r) => r.faction === faction && !r.filler);
 
   return (
@@ -720,7 +750,7 @@ function FactionRoles({
             </button>
           );
         })}
-        {fillerCount > 0 && (
+        {filler && fillerCount > 0 && (
           <div className="mt-1 px-2 py-1.5 rounded bg-[var(--surface-2)] text-[12px] text-[var(--text-dim)] flex justify-between">
             <span>{ROLE_BY_ID[filler.id].name}</span>
             <span className="font-mono">×{fillerCount}</span>

@@ -13,6 +13,7 @@ const PRINT_COLOR: Record<Faction, string> = {
   bandyci: "#b06a08",
   indianie: "#b8382b",
   ufoki: "#0d8a6c",
+  janosik: "#6d4bc4",
 };
 
 const NIGHT_LABEL: Record<string, string> = {
@@ -104,7 +105,7 @@ export default function CardsPage() {
               <article key={p.id} className="cut-card" style={{ borderTopColor: color }}>
                 <header>
                   <span className="faction" style={{ color }}>
-                    {FACTION_LABEL[role.faction]}
+                    {role.faction === "janosik" ? "Frakcja własna" : FACTION_LABEL[role.faction]}
                   </span>
                   {withNames && <span className="player">{p.name}</span>}
                 </header>

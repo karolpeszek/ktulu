@@ -2,15 +2,24 @@
  * Symulacja rozgrywki bez UI — sanity check silnika.
  * Uruchomienie: npx tsx scripts/sim.ts
  */
-import { emptyState, nightSteps, skipReason, livingWithRole } from "../src/lib/engine";
+import { checkIndiansWin, emptyState, nightSteps, skipReason, livingWithRole } from "../src/lib/engine";
+import { ROLE_BY_ID } from "../src/lib/roles";
 import { resolveStep, firstIndex, resolveSearch, resolveHanging, startNight } from "../src/lib/resolve";
-import { buildPool, suggestedCounts } from "../src/lib/setup";
+import {
+  JANOSIK_MIN_PLAYERS,
+  buildPool,
+  janosikAllowed,
+  shuffle,
+  suggestedCounts,
+} from "../src/lib/setup";
 import { FACTIONS, GameState } from "../src/lib/types";
 
-function makeGame(n: number): GameState {
+function makeGame(n: number, withJanosik = false): GameState {
   const s = emptyState();
-  const counts = suggestedCounts(n);
-  const pool = FACTIONS.flatMap((f) => buildPool(f, counts[f], [], true));
+  const counts = suggestedCounts(n, withJanosik);
+  // Tasowanie jak przy prawdziwym rozdaniu — inaczej karty leżą blokami frakcji
+  // i heurystyki symulacji (np. wieszanie ostatniego żywego) trafiają zawsze w to samo.
+  const pool = shuffle(FACTIONS.flatMap((f) => buildPool(f, counts[f], [], true)));
   if (pool.length !== n) throw new Error(`pula ${pool.length} != ${n}`);
   s.players = Array.from({ length: n }, (_, i) => ({
     id: `p${i}`,
@@ -68,7 +77,8 @@ function runDay(s: GameState): GameState {
 const stats: Record<string, number> = {};
 for (let g = 0; g < 200; g++) {
   const n = 12 + (g % 19);
-  let s = makeGame(n);
+  // Co czwarta gra z Janosikiem, o ile liczba graczy na to pozwala.
+  let s = makeGame(n, g % 4 === 0 && janosikAllowed(n));
   let rounds = 0;
   while (!s.winner && rounds < 25) {
     s = runNight(s, false);
@@ -110,3 +120,46 @@ for (const n of [12, 16, 17, 20, 24, 30]) {
     `${n} graczy → miasto ${r.counts.miasto}, bandyci ${r.counts.bandyci}, indianie ${r.counts.indianie}, ufoki ${r.counts.ufoki || "—"} | przeszukania ${r.searchCount} | statek noc ${r.shipNight}`
   );
 }
+
+// — Janosik jako osobna frakcja —
+console.log("\nJanosik:");
+if (janosikAllowed(JANOSIK_MIN_PLAYERS - 1)) throw new Error("Janosik nie powinien być dozwolony poniżej progu");
+for (const n of [12, 13, 14, 18, 21]) {
+  const withJ = suggestedCounts(n, true);
+  const plain = suggestedCounts(n, false);
+  const total = withJ.miasto + withJ.bandyci + withJ.indianie + withJ.ufoki + withJ.janosik;
+  if (total !== n) throw new Error(`skład z Janosikiem dla ${n} graczy sumuje się do ${total}`);
+  if (janosikAllowed(n)) {
+    const base = suggestedCounts(n - 1, false);
+    const sameAsRowBelow =
+      withJ.miasto === base.miasto &&
+      withJ.bandyci === base.bandyci &&
+      withJ.indianie === base.indianie &&
+      withJ.ufoki === base.ufoki;
+    if (!sameAsRowBelow) throw new Error(`skład dla ${n} z Janosikiem nie odpowiada wierszowi ${n - 1}`);
+  } else if (withJ.janosik !== 0) {
+    throw new Error(`Janosik dopuszczony przy ${n} graczach`);
+  }
+  console.log(
+    `${n} graczy → ${withJ.janosik ? "z Janosikiem" : "bez Janosika (poniżej progu)"}: miasto ${withJ.miasto}, bandyci ${withJ.bandyci}, indianie ${withJ.indianie}, ufoki ${withJ.ufoki || "—"}, janosik ${withJ.janosik} (bez dodatku: miasto ${plain.miasto})`
+  );
+}
+
+// Powieszenie Janosika kończy grę jego zwycięstwem.
+const tj = makeGame(13, true);
+const jan = tj.players.find((p) => p.roleId === "janosik");
+if (!jan) throw new Error("Janosik nie trafił do rozdania mimo włączenia");
+const hung = resolveHanging(tj, jan.id, false);
+if (hung.winner !== "janosik") throw new Error("powieszenie Janosika nie kończy gry jego zwycięstwem");
+console.log("powieszenie Janosika → zwycięzca:", hung.winner);
+
+// Dopóki Janosik żyje, Indianie nie mogą wygrać.
+const ti = makeGame(13, true);
+for (const p of ti.players) if (p.roleId !== "janosik" && ROLE_BY_ID[p.roleId!].faction !== "indianie") p.alive = false;
+checkIndiansWin(ti);
+if (ti.winner) throw new Error("Indianie wygrali mimo żywego Janosika");
+const janAlive = ti.players.find((p) => p.roleId === "janosik")!;
+janAlive.alive = false;
+checkIndiansWin(ti);
+if (ti.winner !== "indianie") throw new Error("Indianie nie wygrali po śmierci Janosika");
+console.log("Indianie wygrywają dopiero po zabiciu Janosika — OK");

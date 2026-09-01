@@ -116,10 +116,19 @@ tabela składów.
 
 ## Janosik (dodatek domowy)
 
-Karta miasta. Raz w grze, w nocy i w tajemnicy, Janosik może zamachać ciupagą — wtedy wszyscy się
-cieszą. Nie ma to żadnego wpływu na warunki zwycięstwa. Jeżeli natomiast Janosik zostanie
-powieszony, gra kończy się natychmiast: wygrywa Janosik, a wszyscy pozostali przegrywają — aplikacja
-ostrzega o tym Manitou jeszcze przed wykonaniem wyroku.
+**Osobna, jednoosobowa frakcja** — nie należy do miasta. Można go dołączyć, ale nie trzeba;
+przełącznik w składzie frakcji jest aktywny **od 13 graczy**. Gdy Janosik gra, zajmuje jedno miejsce
+przy stole, a pozostali gracze dzielą się wg wiersza tabeli Xięgi dla liczby o jeden mniejszej —
+przy 13 osobach jest to wiersz „12" (5 / 4 / 3). Liczba przeszukiwanych i noc odpłynięcia statku idą
+natomiast za faktyczną liczbą osób przy stole.
+
+Raz w grze, w nocy i w tajemnicy, Janosik może zamachać ciupagą — wtedy wszyscy się cieszą. Nie ma to
+żadnego wpływu na warunki zwycięstwa; budzi się we własnej fazie, po mieście i przed bandytami.
+
+Janosik wygrywa wtedy i tylko wtedy, gdy rada miasta go powiesi — gra kończy się natychmiast,
+wszyscy pozostali przegrywają, a aplikacja ostrzega Manitou jeszcze przed wykonaniem wyroku. Ma to
+też skutek uboczny w warunku zwycięstwa Indian: dopóki Janosik żyje, przy stole zostaje ktoś spoza
+plemienia, więc Indianie nie mogą wygrać, dopóki i jego nie zabiją.
 
 ## Struktura
 

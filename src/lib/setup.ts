@@ -27,7 +27,19 @@ export const TABLE: Record<number, [number, number, number, number]> = {
   30: [13, 6, 7, 4],
 };
 
-export function suggestedCounts(playerCount: number): FactionCounts {
+/**
+ * Janosik jest osobną, jednoosobową frakcją i dodatkiem domowym — wolno go
+ * dołączyć dopiero wtedy, gdy po odjęciu jego karty zostaje co najmniej tyle
+ * osób, ile obejmuje najmniejszy wiersz tabeli Xięgi.
+ */
+export const JANOSIK_MIN_PLAYERS = 13;
+
+export function janosikAllowed(playerCount: number): boolean {
+  return playerCount >= JANOSIK_MIN_PLAYERS;
+}
+
+/** Podział wg tabeli Xięgi — bez Janosika. */
+function bookSplit(playerCount: number): Omit<FactionCounts, "janosik"> {
   const row = TABLE[playerCount];
   if (row) {
     return { miasto: row[0], bandyci: row[1], indianie: row[2], ufoki: row[3] };
@@ -42,6 +54,16 @@ export function suggestedCounts(playerCount: number): FactionCounts {
   const bandyci = Math.max(6, Math.round(playerCount * 0.2));
   const indianie = Math.max(7, Math.round(playerCount * 0.24));
   return { miasto: playerCount - ufoki - bandyci - indianie, bandyci, indianie, ufoki };
+}
+
+/**
+ * Skład frakcji dla podanej liczby graczy. Gdy gra Janosik, jego karta jest
+ * odliczana od stołu, a pozostali gracze dzielą się wg wiersza tabeli dla
+ * liczby o jeden mniejszej.
+ */
+export function suggestedCounts(playerCount: number, withJanosik = false): FactionCounts {
+  const janosik = withJanosik && janosikAllowed(playerCount) ? 1 : 0;
+  return { ...bookSplit(playerCount - janosik), janosik };
 }
 
 export const TABLE_MIN = 12;
@@ -66,9 +88,9 @@ export function recommendedSettings(playerCount: number): { searchCount: number;
 }
 
 /** Podpowiedź Xięgi w całości: skład frakcji + ustawienia zależne od liczby graczy. */
-export function recommendationFor(playerCount: number) {
+export function recommendationFor(playerCount: number, withJanosik = false) {
   return {
-    counts: suggestedCounts(playerCount),
+    counts: suggestedCounts(playerCount, withJanosik),
     ...recommendedSettings(playerCount),
     inTable: inTable(playerCount),
   };
@@ -80,7 +102,11 @@ export function recommendationFor(playerCount: number) {
  */
 export function syncRecommended(s: GameState) {
   const n = s.players.length;
-  if (!s.setup.manualCounts) s.setup.counts = suggestedCounts(n);
+  if (!janosikAllowed(n)) {
+    s.setup.withJanosik = false;
+    s.setup.counts.janosik = 0;
+  }
+  if (!s.setup.manualCounts) s.setup.counts = suggestedCounts(n, s.setup.withJanosik);
   if (!s.setup.manualSettings) {
     const r = recommendedSettings(n);
     s.settings.searchCount = r.searchCount;
@@ -89,7 +115,12 @@ export function syncRecommended(s: GameState) {
 }
 
 export function totalOf(c: FactionCounts): number {
-  return c.miasto + c.bandyci + c.indianie + c.ufoki;
+  return c.miasto + c.bandyci + c.indianie + c.ufoki + c.janosik;
+}
+
+/** Liczba graczy dzielona wg tabeli Xięgi, czyli bez karty Janosika. */
+export function bookHeadcount(c: FactionCounts): number {
+  return totalOf(c) - c.janosik;
 }
 
 /** Kolejność, w jakiej role są dobierane, gdy Manitou nie wskaże ich ręcznie. */
@@ -125,7 +156,8 @@ export function buildPool(faction: Faction, size: number, picked: string[], auto
       pool.push(r.id);
     }
   }
-  const filler = ROLES.find((r) => r.faction === faction && r.filler)!;
-  while (pool.length < size) pool.push(filler.id);
+  const filler = ROLES.find((r) => r.faction === faction && r.filler);
+  // Frakcja Janosika nie ma szeregowych członków — jest jednoosobowa.
+  if (filler) while (pool.length < size) pool.push(filler.id);
   return pool.slice(0, size);
 }

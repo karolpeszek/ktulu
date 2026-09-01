@@ -118,15 +118,6 @@ export const ROLES: Role[] = [
     desc: "Zerowej nocy uwodzi wybraną osobę. Ta nie może działać na jego szkodę: nawoływać do jego zabicia, głosować za tym, musi głosować za nim w pojedynkach i nie może ujawnić, że została uwiedziona.",
   },
   {
-    id: "janosik",
-    name: "Janosik",
-    faction: "miasto",
-    tier: "zwykla",
-    nightUse: "raz",
-    selfTarget: true,
-    desc: "Raz w grze, w nocy i w tajemnicy, macha ciupagą — wtedy wszyscy się cieszą. Jeżeli Janosik zostanie powieszony, wygrywa on sam, a wszyscy pozostali przegrywają.",
-  },
-  {
     id: "mieszczanin",
     name: "Obywatel miasta",
     faction: "miasto",
@@ -312,6 +303,18 @@ export const ROLES: Role[] = [
     nightUse: "brak",
     desc: "Szeregowy ufoludek. Budzi się z pobratymcami, przeszukuje i nadaje sygnał.",
   },
+
+  // ── Janosik (dodatek domowy, osobna frakcja) ─────────────────────────────
+  {
+    id: "janosik",
+    name: "Janosik",
+    faction: "janosik",
+    tier: "kontrowersyjna",
+    leader: true,
+    nightUse: "raz",
+    selfTarget: true,
+    desc: "Sam sobie frakcja. Raz w grze, w nocy i w tajemnicy, macha ciupagą — wtedy wszyscy się cieszą, ale na wynik gry nie ma to wpływu. Janosik wygrywa wtedy i tylko wtedy, gdy rada miasta go powiesi; wszyscy pozostali wtedy przegrywają. Dopóki żyje, Indianie nie mogą wygrać.",
+  },
 ];
 
 export const ROLE_BY_ID: Record<string, Role> = Object.fromEntries(ROLES.map((r) => [r.id, r]));
@@ -320,8 +323,9 @@ export function rolesOf(faction: Faction): Role[] {
   return ROLES.filter((r) => r.faction === faction);
 }
 
-export function fillerRole(faction: Faction): Role {
-  return ROLES.find((r) => r.faction === faction && r.filler)!;
+/** Frakcja Janosika nie ma szeregowych członków, więc bywa `undefined`. */
+export function fillerRole(faction: Faction): Role | undefined {
+  return ROLES.find((r) => r.faction === faction && r.filler);
 }
 
 export const TIER_LABEL: Record<string, string> = {

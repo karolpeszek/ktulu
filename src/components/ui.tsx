@@ -12,6 +12,7 @@ export const FACTION_COLOR: Record<Faction | "system", string> = {
   bandyci: "var(--bandit)",
   indianie: "var(--indian)",
   ufoki: "var(--ufo)",
+  janosik: "var(--janosik)",
   system: "var(--text-dim)",
 };
 
@@ -154,16 +155,22 @@ export function Toggle({
   checked,
   onChange,
   label,
+  disabled = false,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="flex items-center gap-2.5 text-[13px]"
+      className={cx(
+        "flex items-center gap-2.5 text-[13px]",
+        disabled && "opacity-40 pointer-events-none"
+      )}
     >
       <span
         className={cx(

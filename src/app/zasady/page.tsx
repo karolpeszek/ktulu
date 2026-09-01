@@ -1,17 +1,19 @@
 import { ROLES, TIER_LABEL } from "@/lib/roles";
 import { FACTIONS, FACTION_GOAL, FACTION_LABEL } from "@/lib/types";
 import { Badge, Card } from "@/components/ui";
-import { TABLE, recommendedSettings } from "@/lib/setup";
+import { JANOSIK_MIN_PLAYERS, TABLE, recommendedSettings } from "@/lib/setup";
 
 const COLOR = {
   miasto: "var(--city)",
   bandyci: "var(--bandit)",
   indianie: "var(--indian)",
   ufoki: "var(--ufo)",
+  janosik: "var(--janosik)",
 } as const;
 
 const NIGHT_ORDER: Record<string, string[]> = {
-  Miasto: ["Szeryf", "Pastor", "Poborca podatków", "Ochroniarz", "Hazardzista", "Opój", "Janosik"],
+  Miasto: ["Szeryf", "Pastor", "Poborca podatków", "Ochroniarz", "Hazardzista", "Opój"],
+  Janosik: ["Janosik — ciupaga"],
   Bandyci: [
     "Bandyci się budzą",
     "Bandyci przeszukują",
@@ -107,14 +109,17 @@ export default function RulesPage() {
           ))}
         </div>
         <p className="mt-3 text-[12.5px] text-[var(--text-dim)]">
-          Wygrać może tylko jedna frakcja. W sytuacjach spornych decyduje Manitou. Wyjątek domowy:
-          powieszony Janosik wygrywa sam, a wszyscy pozostali przegrywają.
+          Wygrać może tylko jedna frakcja. W sytuacjach spornych decyduje Manitou. Janosik to
+          dodatek domowy: jednoosobowa frakcja, którą wolno dopuścić od {JANOSIK_MIN_PLAYERS}{" "}
+          graczy. Zajmuje jedno miejsce przy stole, a pozostali dzielą się wg wiersza tabeli dla
+          liczby o jeden mniejszej. Dopóki Janosik żyje, Indianie nie mogą wygrać — muszą wybić
+          również jego.
         </p>
       </Card>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
         <Card title="Kolejność nocy">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
             {Object.entries(NIGHT_ORDER).map(([k, list]) => (
               <div key={k}>
                 <div className="label-xs mb-1.5">{k}</div>
@@ -244,6 +249,11 @@ export default function RulesPage() {
             </tbody>
           </table>
         </div>
+        <p className="mt-3 text-[12px] text-[var(--text-dim)] leading-relaxed">
+          Z Janosikiem przy stole czytasz wiersz o jeden niższy: przy {JANOSIK_MIN_PLAYERS} graczach
+          jeden dostaje kartę Janosika, a pozostałych 12 dzieli się jak w wierszu „12”. Liczba
+          przeszukiwanych i noc odpłynięcia statku idą natomiast za faktyczną liczbą osób przy stole.
+        </p>
       </Card>
     </div>
   );

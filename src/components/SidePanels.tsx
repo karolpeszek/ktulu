@@ -189,17 +189,6 @@ export function ManualPanel() {
                   {FACTION_LABEL[f]}
                 </Button>
               ))}
-              <Button
-                size="sm"
-                onClick={() =>
-                  update((s) => {
-                    s.winner = null;
-                    setWinner(s, "janosik", "Manitou ogłosił zwycięstwo Janosika.");
-                  })
-                }
-              >
-                Janosik
-              </Button>
             </div>
           </div>
 
