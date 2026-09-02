@@ -888,7 +888,12 @@ function FactionRoles({
           {picked.length} + {autoCount} / {size}
         </span>
       </div>
-      <div className="p-2 flex flex-col gap-0.5 max-h-[260px] overflow-y-auto">
+      <div
+        className="p-2 flex flex-col gap-0.5 max-h-[260px] overflow-y-auto"
+        // Bez tego przeglądarka potrafi sama przewinąć listę, gdy zmieni się
+        // wysokość jej zawartości — i klik ląduje wtedy w sąsiednim wierszu.
+        style={{ overflowAnchor: "none" }}
+      >
         {list.map((r) => {
           const on = picked.includes(r.id);
           const auto = !on && pool.includes(r.id);
@@ -913,7 +918,19 @@ function FactionRoles({
               }
             >
               <button
-                onClick={() => onToggle(r.id)}
+                // Przełączenie następuje przy naciśnięciu, a nie przy `click`,
+                // który domyka się dopiero na puszczeniu przycisku. Przy szybkim
+                // klikaniu kursor bywa już nad sąsiadem albo lista zdąży się
+                // przesunąć, a wtedy przeglądarka zalicza kliknięcie gdzie indziej.
+                onPointerDown={(e) => {
+                  if (blocked) return;
+                  e.preventDefault();
+                  onToggle(r.id);
+                }}
+                // Klawiatura wysyła `click` bez zdarzeń wskaźnika (detail === 0).
+                onClick={(e) => {
+                  if (!blocked && e.detail === 0) onToggle(r.id);
+                }}
                 disabled={blocked}
                 className={cx(
                   "ui-row w-full flex items-center gap-2 text-left px-2 h-7 rounded transition-colors",
@@ -949,23 +966,20 @@ function FactionRoles({
             </Tooltip>
           );
         })}
-        {filler && fillerCount > 0 && (
-          <div className="mt-1 px-2 h-7 rounded bg-[var(--surface-2)] text-[12px] text-[var(--text-dim)] flex items-center justify-between">
-            <span>{ROLE_BY_ID[filler.id].name}</span>
-            <span className="font-mono">×{fillerCount}</span>
-          </div>
-        )}
       </div>
       <div className="px-3 py-2 border-t border-[var(--border)] text-[11px] text-[var(--text-faint)] leading-relaxed">
+        {filler && (
+          <span className="flex items-center justify-between mb-1 text-[12px] text-[var(--text-dim)]">
+            <span>{ROLE_BY_ID[filler.id].name}</span>
+            <span className="font-mono">×{fillerCount}</span>
+          </span>
+        )}
+        {/* Tekst o stałej liczbie wierszy — zmiana wysokości stopki przesuwałaby
+            sąsiednie karty w siatce. */}
         <span className="block mb-0.5">
-          <strong className="text-[var(--text-dim)]">{picked.length}</strong> wybranych ręcznie
-          {autoCount > 0 && (
-            <>
-              , <strong className="text-[var(--text-dim)]">{autoCount}</strong> dobranych
-              automatycznie
-            </>
-          )}
-          . Każda karta przypięta ręcznie wypiera jedną z dobranych.
+          <strong className="text-[var(--text-dim)]">{picked.length}</strong> ręcznie,{" "}
+          <strong className="text-[var(--text-dim)]">{autoCount}</strong> dobranych automatycznie.
+          Każda karta przypięta ręcznie wypiera jedną z dobranych.
         </span>
         {FACTION_GOAL[faction]}
       </div>
