@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useGame } from "@/lib/store";
-import { GameState } from "@/lib/types";
+import { FACTION_LABEL, Faction, GameState } from "@/lib/types";
 import {
   NightStep,
   activeMembers,
@@ -44,12 +44,20 @@ function forbiddenFor(s: GameState, step: NightStep): string[] {
   return [...out];
 }
 
+function factionFromFeedback(lines: string[]): Faction | null {
+  const txt = lines.join("\n").toLowerCase();
+  const m = txt.match(/frakcj(?:a|i)\s*:?\s*(miasto|bandyci|indianie|ufoki|janosik)\b/);
+  if (m) return m[1] as Faction;
+  return null;
+}
+
 export default function NightPanel() {
   const { state, set } = useGame();
   const [history, setHistory] = useState<GameState[]>([]);
   const [pick, setPick] = useState<string | null>(null);
   const [answer, setAnswer] = useState<"tak" | "nie" | null>(null);
   const [joy, setJoy] = useState(false);
+  const [factionBanner, setFactionBanner] = useState<Faction | null>(null);
 
   const steps = useMemo(() => nightSteps(state), [state]);
   const idx = Math.min(state.stepIndex, steps.length - 1);
@@ -59,6 +67,10 @@ export default function NightPanel() {
 
   const color = FACTION_COLOR[step.faction];
   const blocked = step.action === "end-night" ? null : skipReason(state, step);
+  const roleActor = step.roleId ? livingWithRole(state, step.roleId) : null;
+  const blockedByInactiveRole = !!roleActor && state.asleep.includes(roleActor.id);
+  const showTheatricsHint = !!blocked && blockedByInactiveRole && state.settings.wakeInactiveForShow;
+  const revealFaction = factionFromFeedback(state.feedback);
   const forbidden = forbiddenFor(state, step);
   const afterYes = TARGET_AFTER_YES[step.id] ?? "none";
   const gamblerRunning = state.pending === "gambler" && step.id === "gambler";
@@ -102,6 +114,33 @@ export default function NightPanel() {
   return (
     <div className="flex flex-col gap-4">
       {joy && <JoyOverlay onClose={() => setJoy(false)} />}
+      {factionBanner && (
+        <button
+          type="button"
+          onClick={() => setFactionBanner(null)}
+          className="fixed inset-0 z-50 p-4 sm:p-8"
+          style={{ background: "rgb(0 0 0 / 0.72)" }}
+        >
+          <div
+            className="h-full w-full rounded-2xl border grid place-items-center text-center px-4"
+            style={{
+              background: FACTION_COLOR[factionBanner],
+              borderColor: "color-mix(in srgb, var(--surface) 35%, transparent)",
+              color: "var(--surface)",
+            }}
+          >
+            <div>
+              <div className="label-xs opacity-85" style={{ color: "inherit" }}>
+                Frakcja
+              </div>
+              <div className="mt-2 text-[clamp(42px,9vw,120px)] font-black leading-none tracking-tight">
+                {FACTION_LABEL[factionBanner]}
+              </div>
+              <div className="mt-4 text-[13px] opacity-90">Kliknij, aby zamknąć</div>
+            </div>
+          </div>
+        </button>
+      )}
 
       {state.feedback.length > 0 && (
         <div className="anim-fade-up rounded-lg border border-[var(--warn)]/40 bg-[var(--warn-soft)] px-4 py-3">
@@ -125,6 +164,13 @@ export default function NightPanel() {
               </p>
             )
           )}
+          {revealFaction && (
+            <div className="mt-3 pt-3 border-t border-[var(--warn)]/25">
+              <Button variant="primary" size="sm" onClick={() => setFactionBanner(revealFaction)}>
+                Pokaż duży baner frakcji
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -138,9 +184,16 @@ export default function NightPanel() {
           </div>
           <h2 className="text-[20px] font-semibold tracking-tight">{step.title}</h2>
           <p className="mt-2 text-[13.5px] text-[var(--text-dim)]">{blocked}</p>
-          <p className="mt-1 text-[12px] text-[var(--text-faint)]">
-            Nikogo nie budzimy. Jeśli chcesz zachować pozory, odczekaj chwilę i przejdź dalej.
-          </p>
+          {showTheatricsHint ? (
+            <p className="mt-1 text-[12px] text-[var(--text-faint)]">
+              Teatrzyk włączony: obudź tę postać dla pozorów, ale nie wykonuje akcji. Potem przejdź
+              dalej.
+            </p>
+          ) : (
+            <p className="mt-1 text-[12px] text-[var(--text-faint)]">
+              Nikogo nie budzimy. Jeśli chcesz zachować pozory, odczekaj chwilę i przejdź dalej.
+            </p>
+          )}
           <div className="mt-4 flex items-center gap-2 pt-3 border-t border-[var(--border)]">
             <Button variant="primary" onClick={skipStep}>
               Dalej

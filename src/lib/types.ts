@@ -76,6 +76,8 @@ export interface Settings {
   banditsCanKill: boolean;
   /** Tryb jawności wg rozdziału „Jawność gry". */
   disclosure: "jawny" | "tajny";
+  /** Dla pozorów: nieaktywne role są wywoływane, ale nie wykonują akcji. */
+  wakeInactiveForShow: boolean;
 }
 
 export interface SetupConfig {
