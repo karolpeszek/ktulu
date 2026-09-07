@@ -44,10 +44,23 @@ function forbiddenFor(s: GameState, step: NightStep): string[] {
   return [...out];
 }
 
-function factionFromFeedback(lines: string[]): Faction | null {
-  const txt = lines.join("\n").toLowerCase();
+function revealFromFeedback(lines: string[]): { faction: Faction; role?: string } | null {
+  const raw = lines.join("\n");
+  const txt = raw.toLowerCase();
+  const roleMatch = txt.match(
+    /karta(?: klienta)?\s*:\s*([^—\n]+?)\s*[—-]\s*frakcja\s*(miasto|bandyci|indianie|ufoki|janosik)\b/
+  );
+  if (roleMatch) {
+    const rawRoleMatch = raw.match(
+      /karta(?: klienta)?\s*:\s*([^—\n]+?)\s*[—-]\s*frakcja\s*(miasto|bandyci|indianie|ufoki|janosik)\b/i
+    );
+    return {
+      role: (rawRoleMatch?.[1] ?? roleMatch[1]).trim(),
+      faction: roleMatch[2] as Faction,
+    };
+  }
   const m = txt.match(/frakcj(?:a|i)\s*:?\s*(miasto|bandyci|indianie|ufoki|janosik)\b/);
-  if (m) return m[1] as Faction;
+  if (m) return { faction: m[1] as Faction };
   return null;
 }
 
@@ -57,7 +70,7 @@ export default function NightPanel() {
   const [pick, setPick] = useState<string | null>(null);
   const [answer, setAnswer] = useState<"tak" | "nie" | null>(null);
   const [joy, setJoy] = useState(false);
-  const [factionBanner, setFactionBanner] = useState<Faction | null>(null);
+  const [revealBanner, setRevealBanner] = useState<{ faction: Faction; role?: string } | null>(null);
 
   const steps = useMemo(() => nightSteps(state), [state]);
   const idx = Math.min(state.stepIndex, steps.length - 1);
@@ -70,7 +83,7 @@ export default function NightPanel() {
   const roleActor = step.roleId ? livingWithRole(state, step.roleId) : null;
   const blockedByInactiveRole = !!roleActor && state.asleep.includes(roleActor.id);
   const showTheatricsHint = !!blocked && blockedByInactiveRole && state.settings.wakeInactiveForShow;
-  const revealFaction = factionFromFeedback(state.feedback);
+  const reveal = revealFromFeedback(state.feedback);
   const forbidden = forbiddenFor(state, step);
   const afterYes = TARGET_AFTER_YES[step.id] ?? "none";
   const gamblerRunning = state.pending === "gambler" && step.id === "gambler";
@@ -114,27 +127,37 @@ export default function NightPanel() {
   return (
     <div className="flex flex-col gap-4">
       {joy && <JoyOverlay onClose={() => setJoy(false)} />}
-      {factionBanner && (
+      {revealBanner && (
         <button
           type="button"
-          onClick={() => setFactionBanner(null)}
+          onClick={() => setRevealBanner(null)}
           className="fixed inset-0 z-50 p-4 sm:p-8"
           style={{ background: "rgb(0 0 0 / 0.72)" }}
         >
           <div
             className="h-full w-full rounded-2xl border grid place-items-center text-center px-4"
             style={{
-              background: FACTION_COLOR[factionBanner],
+              background: FACTION_COLOR[revealBanner.faction],
               borderColor: "color-mix(in srgb, var(--surface) 35%, transparent)",
               color: "var(--surface)",
             }}
           >
             <div>
-              <div className="label-xs opacity-85" style={{ color: "inherit" }}>
+              {revealBanner.role && (
+                <>
+                  <div className="label-xs opacity-85" style={{ color: "inherit" }}>
+                    Karta
+                  </div>
+                  <div className="mt-2 text-[clamp(34px,7.2vw,92px)] font-black leading-none tracking-tight">
+                    {revealBanner.role}
+                  </div>
+                </>
+              )}
+              <div className={cx("label-xs opacity-85", revealBanner.role && "mt-5")} style={{ color: "inherit" }}>
                 Frakcja
               </div>
               <div className="mt-2 text-[clamp(42px,9vw,120px)] font-black leading-none tracking-tight">
-                {FACTION_LABEL[factionBanner]}
+                {FACTION_LABEL[revealBanner.faction]}
               </div>
               <div className="mt-4 text-[13px] opacity-90">Kliknij, aby zamknąć</div>
             </div>
@@ -164,10 +187,10 @@ export default function NightPanel() {
               </p>
             )
           )}
-          {revealFaction && (
+          {reveal && (
             <div className="mt-3 pt-3 border-t border-[var(--warn)]/25">
-              <Button variant="primary" size="sm" onClick={() => setFactionBanner(revealFaction)}>
-                Pokaż duży baner frakcji
+              <Button variant="primary" size="sm" onClick={() => setRevealBanner(reveal)}>
+                {reveal.role ? "Pokaż duży baner karty i frakcji" : "Pokaż duży baner frakcji"}
               </Button>
             </div>
           )}
