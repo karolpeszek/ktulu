@@ -12,7 +12,8 @@ pnpm run dev       # http://localhost:3000
 pnpm run build     # eksport statyczny do out/ + wygenerowanie service workera
 pnpm run preview   # podgląd zbudowanej wersji na http://localhost:4173
 pnpm run lint
-pnpm dlx tsx scripts/sim.ts   # 200 symulowanych partii — sanity check silnika
+pnpm run test      # testy zasad gry
+pnpm run verify    # lint + typy + testy (to samo, co przed wdrożeniem)
 ```
 
 Aplikacja jest w całości statyczna (`output: "export"`), bez backendu — build produkuje zwykłe
@@ -35,6 +36,31 @@ Zasoby z hashem w nazwie (`/_next/static/*`) serwowane są z cache, reszta strat
 network-first z fallbackiem na cache. Nagłówki w [public/_headers](public/_headers) pilnują, żeby
 `sw.js`, manifest i `version.json` nigdy nie były cache’owane przez CDN.
 
+## Testy zasad
+
+Każda reguła z Xięgi ma swój test — od tabeli składów, przez działanie każdej karty nocnej,
+po warunki zwycięstwa każdej frakcji i dodatek domowy z Janosikiem.
+
+```
+tests/setup.test.ts     tabela składów, ustawienia wg liczby graczy, pula kart, katalog ról
+tests/night.test.ts     kolejność nocy, pomijanie nieaktywnych, każda karta budzona po zmroku
+tests/day.test.ts       trucizna, pojedynki, przeszukanie, wieszanie, ułaskawienie
+tests/victory.test.ts   warunki zwycięstwa — i sytuacje, w których zwycięstwo NIE następuje
+tests/game.test.ts      całe partie rozgrywane losowo, z kontrolą niezmienników stanu
+```
+
+Runner to wbudowany `node --test` z `tsx`; testy sięgają wprost do czystych funkcji silnika
+(`src/lib/`), więc nie wymagają przeglądarki ani atrapy DOM.
+
+**Testy są bramką przed wdrożeniem.** `pnpm run build` — komenda, którą Cloudflare buduje projekt —
+zaczyna od `pnpm run verify` (lint + `tsc --noEmit` + testy). Jeśli którykolwiek test nie przejdzie,
+build kończy się błędem i **wdrożenie w ogóle nie następuje**; na Cloudflare widać wtedy nieudany
+build, a poprzednia wersja strony zostaje nietknięta. `pnpm run build:only` pomija weryfikację —
+przydaje się lokalnie, gdy testy właśnie się przepuściło.
+
+Dodatkowo [.github/workflows/ci.yml](.github/workflows/ci.yml) uruchamia to samo przy każdym pchnięciu
+i na pull requestach, żeby status był widoczny w GitHubie, a nie tylko w logu builda Cloudflare.
+
 ## Wdrożenie na Cloudflare
 
 Projekt jest wdrażany jako **Worker ze statycznymi zasobami** (Workers Builds) — aplikacja nie ma
@@ -51,7 +77,7 @@ Ustawienia projektu połączonego z repozytorium:
 
 | Ustawienie | Wartość |
 | --- | --- |
-| Build command | `pnpm run build` |
+| Build command | `pnpm run build` (odpala testy przed buildem) |
 | Deploy command | `npx wrangler deploy` |
 | Node version | z `.nvmrc` (24) |
 

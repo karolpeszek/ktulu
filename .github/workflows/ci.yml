@@ -1,0 +1,34 @@
+# Kontrola jakości przy każdym pchnięciu na GitHuba. Nie jest to jedyna
+# bramka przed wdrożeniem — `pnpm run build`, którym Cloudflare buduje
+# projekt, sam odpala `pnpm run verify`, więc nieprzechodzące testy
+# przerywają build zanim dojdzie do deploya. Ten przebieg daje dodatkowo
+# widoczny status w GitHubie i sprawdza pull requesty.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verify:
+    name: Lint, typy i testy zasad
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalacja zależności
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint, typy i testy
+        run: pnpm run verify
+
+      - name: Build statyczny
+        run: pnpm run build:only

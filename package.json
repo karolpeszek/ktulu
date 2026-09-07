@@ -5,11 +5,15 @@
   "packageManager": "pnpm@10.11.1",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/gen-sw.mjs",
+    "build": "pnpm run verify && next build && node scripts/gen-sw.mjs",
     "preview": "pnpm dlx serve out -l 4173",
     "deploy": "pnpm run build && pnpm dlx wrangler deploy",
     "icons": "node scripts/gen-icons.mjs",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "verify": "pnpm run lint && pnpm run typecheck && pnpm run test",
+    "build:only": "next build && node scripts/gen-sw.mjs"
   },
   "dependencies": {
     "next": "16.3.3",
@@ -24,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   },
   "pnpm": {
