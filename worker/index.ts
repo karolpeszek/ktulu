@@ -5,10 +5,9 @@
  * dostaje wyłącznie ścieżki wskazane w `run_worker_first`, czyli `/api/*`.
  * Bez tego ustawienia żądanie do API nie trafiłoby tutaj: nie pasowałoby do
  * żadnego pliku, więc `not_found_handling` odesłałby wyeksportowaną stronę 404.
- *
- * Dopóki nie ma tu żadnego kodu, Cloudflare traktuje projekt jako „tylko
- * statyczne zasoby" i nie pozwala ustawić zmiennych środowiskowych.
  */
+
+import { sprawdzKonfiguracje } from "./config";
 
 export interface Env {
   /** Dostęp do wyeksportowanej strony z poziomu Workera. */
@@ -38,21 +37,28 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    // Cokolwiek spoza /api/ tu trafi, obsługuje warstwa statyczna.
+    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+
+    const konfiguracja = sprawdzKonfiguracje(env);
+
+    // Diagnostyka odpowiada zawsze — po to istnieje, żeby dało się sprawdzić,
+    // czy zmienne doszły na produkcję. Nie ujawnia niczego wrażliwego.
     if (url.pathname === "/api/health") {
-      return json({
-        ok: true,
-        // Pozwala sprawdzić z przeglądarki, czy zmienne doszły na produkcję,
-        // bez ujawniania czegokolwiek wrażliwego.
-        rpId: env.RP_ID ?? null,
-        rpName: env.RP_NAME ?? null,
-      });
+      return konfiguracja.ok
+        ? json({ ok: true, rpId: konfiguracja.konfiguracja.rpId, rpName: konfiguracja.konfiguracja.rpName })
+        : json({ ok: false, blad: "konfiguracja", powod: konfiguracja.powod }, 503);
     }
 
-    if (url.pathname.startsWith("/api/")) {
-      return json({ error: "Nie ma takiego zasobu." }, 404);
+    // Reszta API bez poprawnej konfiguracji nie ma prawa działać: passkey
+    // zapisany pod złym RP_ID jest bezużyteczny i nie da się tego cofnąć.
+    if (!konfiguracja.ok) {
+      return json(
+        { error: "Aplikacja nie jest poprawnie skonfigurowana.", powod: konfiguracja.powod },
+        503
+      );
     }
 
-    // Cokolwiek innego tu trafi, obsługuje warstwa statyczna.
-    return env.ASSETS.fetch(request);
+    return json({ error: "Nie ma takiego zasobu." }, 404);
   },
 } satisfies ExportedHandler<Env>;
