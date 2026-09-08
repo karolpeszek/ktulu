@@ -26,10 +26,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as GameState;
+        const base = emptyState();
         // Hydratacja z localStorage musi nastąpić po pierwszym renderze,
         // żeby serwer i klient wyrenderowały to samo.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        if (parsed?.version === 1) setState({ ...emptyState(), ...parsed });
+        if (parsed?.version === 1)
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setState({
+            ...base,
+            ...parsed,
+            settings: { ...base.settings, ...parsed.settings },
+            setup: { ...base.setup, ...parsed.setup },
+          });
       }
     } catch {
       /* pusty stan */

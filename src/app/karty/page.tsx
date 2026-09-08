@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useGame } from "@/lib/store";
 import { FACTION_GOAL, FACTION_LABEL, Faction } from "@/lib/types";
-import { ROLE_BY_ID } from "@/lib/roles";
+import { ROLE_BY_ID, ROLES } from "@/lib/roles";
 import { shuffle } from "@/lib/setup";
 import { Badge, Button, Card, Empty, Toggle, cx } from "@/components/ui";
 
@@ -31,6 +31,7 @@ export default function CardsPage() {
   const [withNames, setWithNames] = useState(true);
   const [shuffled, setShuffled] = useState(false);
   const [withCheatSheet, setWithCheatSheet] = useState(true);
+  const [allCardsPdf, setAllCardsPdf] = useState(false);
   const [seed, setSeed] = useState(0);
 
   const players = useMemo(() => {
@@ -43,8 +44,11 @@ export default function CardsPage() {
   if (!loaded) return null;
 
   const assigned = players.filter((p) => p.roleId);
+  const printable = allCardsPdf
+    ? ROLES.map((role) => ({ key: role.id, role, playerName: null as string | null }))
+    : assigned.map((p) => ({ key: p.id, role: ROLE_BY_ID[p.roleId!], playerName: p.name }));
 
-  if (assigned.length === 0) {
+  if (assigned.length === 0 && !allCardsPdf) {
     return (
       <Card title="Karteczki do druku">
         <Empty>
@@ -65,7 +69,7 @@ export default function CardsPage() {
         title="Karteczki do rozcięcia"
         right={
           <div className="flex items-center gap-2">
-            <Badge>{assigned.length} kart</Badge>
+            <Badge>{printable.length} kart</Badge>
             <Button variant="primary" onClick={() => window.print()}>
               Drukuj / zapisz PDF
             </Button>
@@ -73,7 +77,7 @@ export default function CardsPage() {
         }
       >
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <Toggle checked={withNames} onChange={setWithNames} label="Imię gracza na karcie" />
+          <Toggle checked={withNames} onChange={setWithNames} label="Imię gracza na karcie" disabled={allCardsPdf} />
           <Toggle
             checked={shuffled}
             onChange={(v) => {
@@ -81,9 +85,20 @@ export default function CardsPage() {
               setSeed((x) => x + 1);
             }}
             label="Wymieszaj kolejność (rozdanie na ślepo)"
+            disabled={allCardsPdf}
           />
-          <Toggle checked={withCheatSheet} onChange={setWithCheatSheet} label="Dołącz ściągę Manitou" />
-          {shuffled && (
+          <Toggle
+            checked={allCardsPdf}
+            onChange={setAllCardsPdf}
+            label="Wydruk pełnej talii (wszystkie role, po 1 szt.)"
+          />
+          <Toggle
+            checked={withCheatSheet}
+            onChange={setWithCheatSheet}
+            label="Dołącz ściągę Manitou"
+            disabled={allCardsPdf}
+          />
+          {shuffled && !allCardsPdf && (
             <Button size="sm" onClick={() => setSeed((x) => x + 1)}>
               Przetasuj ponownie
             </Button>
@@ -92,23 +107,23 @@ export default function CardsPage() {
         <p className="mt-3 text-[12px] text-[var(--text-dim)] leading-relaxed">
           W oknie drukowania wybierz „Zapisz jako PDF”, format A4, marginesy domyślne i wyłącz
           nagłówki strony. Sześć karteczek (90 × 88 mm) na stronę, linie cięcia zaznaczone
-          przerywaną ramką.
-          {withCheatSheet && " Ściąga Manitou drukuje się na osobnej, ostatniej stronie."}
+          przerywaną ramką. {allCardsPdf ? "Pełna talia nadaje się do zalaminowania na wiele rozgrywek." : ""}
+          {withCheatSheet && !allCardsPdf && " Ściąga Manitou drukuje się na osobnej, ostatniej stronie."}
         </p>
       </Card>
 
       <div className="print-sheet">
         <div className="cards-grid">
-          {assigned.map((p) => {
-            const role = ROLE_BY_ID[p.roleId!];
+          {printable.map((card) => {
+            const role = card.role;
             const color = PRINT_COLOR[role.faction];
             return (
-              <article key={p.id} className="cut-card" style={{ borderTopColor: color }}>
+              <article key={card.key} className="cut-card" style={{ borderTopColor: color }}>
                 <header>
                   <span className="faction" style={{ color }}>
                     {role.faction === "janosik" ? "Frakcja własna" : FACTION_LABEL[role.faction]}
                   </span>
-                  {withNames && <span className="player">{p.name}</span>}
+                  {!allCardsPdf && withNames && card.playerName && <span className="player">{card.playerName}</span>}
                 </header>
                 <h2 className="role">{role.name}</h2>
                 <p className="desc">{role.desc}</p>
@@ -123,7 +138,7 @@ export default function CardsPage() {
           })}
         </div>
 
-        {withCheatSheet && (
+        {withCheatSheet && !allCardsPdf && (
           <section className="cheat">
             <h2>Ściąga Manitou — kto jest kim</h2>
             <table>

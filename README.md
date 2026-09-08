@@ -142,6 +142,7 @@ gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
   sześć sztuk (90 × 88 mm) na stronie A4 z liniami cięcia,
 - opcje: imię gracza na karcie (albo bez — do rozdania na ślepo), wymieszanie kolejności,
   dołączona ściąga Manitou „kto jest kim” na osobnej stronie,
+- dodatkowo: wydruk pełnej talii (wszystkie role, po 1 sztuce) do PDF pod laminowanie,
 - „Drukuj / zapisz PDF” otwiera okno drukowania przeglądarki — wybierz „Zapisz jako PDF”.
 
 **Ustawienia (`/ustawienia`)** — motyw (auto / jasny / ciemny), rozmiar elementów (zwykły / dotyk)

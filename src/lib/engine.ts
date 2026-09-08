@@ -7,6 +7,7 @@ export const DEFAULT_SETTINGS: Settings = {
   maxDuelsPerDay: 2,
   banditsCanKill: false,
   disclosure: "tajny",
+  wakeInactiveForShow: false,
 };
 
 export function emptyState(): GameState {

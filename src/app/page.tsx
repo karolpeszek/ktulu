@@ -568,7 +568,7 @@ export default function SetupPage() {
                 </select>
               </Field>
             </div>
-            <div className="mt-3">
+            <div className="mt-3 flex flex-col gap-2.5">
               <Toggle
                 checked={state.settings.banditsCanKill}
                 onChange={(v) =>
@@ -577,6 +577,15 @@ export default function SetupPage() {
                   })
                 }
                 label="Bandyci mogą zabić okradaną ofiarę (Xięga odradza)"
+              />
+              <Toggle
+                checked={state.settings.wakeInactiveForShow}
+                onChange={(v) =>
+                  update((s) => {
+                    s.settings.wakeInactiveForShow = v;
+                  })
+                }
+                label="Teatrzyk: budź nieaktywną postać mimo pominięcia jej akcji"
               />
             </div>
           </Card>
