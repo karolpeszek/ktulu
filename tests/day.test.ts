@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 import { idolAt, makeState } from "./helpers";
 import {
+  duelOutcome,
   resolveDuel,
   resolveHanging,
   resolvePoison,
@@ -38,6 +39,54 @@ describe("Trucizna szamanki", () => {
     s.poisoned = "p1";
     const po = resolvePoison(s);
     assert.equal(po.winner, "miasto");
+  });
+});
+
+describe("Podgląd wyniku pojedynku", () => {
+  // Pulpit pokazuje ten sam wynik, zanim Manitou kliknie — stąd osobne testy
+  // na samą funkcję, niezależnie od tego, co potem robi resolveDuel.
+  it("przeżywa ten, za którym padło więcej głosów", () => {
+    assert.equal(duelOutcome({ votesA: 3, votesB: 1 }), "a");
+    assert.equal(duelOutcome({ votesA: 1, votesB: 4 }), "b");
+  });
+
+  it("remis głosów oznacza śmierć obu", () => {
+    assert.equal(duelOutcome({ votesA: 2, votesB: 2 }), "oba");
+  });
+
+  it("same wstrzymania nikogo nie zabijają", () => {
+    assert.equal(duelOutcome({ votesA: 0, votesB: 0 }), "nikt");
+  });
+
+  it("nadpisanie bije wynik głosowania", () => {
+    assert.equal(duelOutcome({ votesA: 0, votesB: 9, override: "a" }), "a");
+    assert.equal(duelOutcome({ votesA: 9, votesB: 0, override: "b" }), "b");
+    assert.equal(duelOutcome({ votesA: 9, votesB: 0, override: "remis" }), "oba");
+  });
+
+  it("podgląd zgadza się z faktycznym rozstrzygnięciem", () => {
+    const warianty = [
+      { votesA: 3, votesB: 1 },
+      { votesA: 1, votesB: 3 },
+      { votesA: 2, votesB: 2 },
+      { votesA: 0, votesB: 0 },
+      { votesA: 0, votesB: 5, override: "a" as const },
+      { votesA: 5, votesB: 0, override: "remis" as const },
+    ];
+    for (const w of warianty) {
+      const po = resolveDuel(dzien(["szeryf", "herszt", "wodz"]), { aId: "p0", bId: "p1", ...w });
+      const wynik = duelOutcome(w);
+      assert.equal(
+        po.players[0].alive,
+        wynik === "a" || wynik === "nikt",
+        `atakujący przy ${JSON.stringify(w)}`
+      );
+      assert.equal(
+        po.players[1].alive,
+        wynik === "b" || wynik === "nikt",
+        `zaatakowany przy ${JSON.stringify(w)}`
+      );
+    }
   });
 });
 

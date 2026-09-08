@@ -1,12 +1,36 @@
-# Cloudflare Workers Builds — statyczna aplikacja bez kodu Workera.
-# Cały ruch obsługuje warstwa Static Assets, dlatego nie ma pola `main`.
+# Cloudflare Workers Builds — wyeksportowana strona plus cienki Worker na API.
+#
+# Sama warstwa Static Assets nie wystarcza: projekt bez pola `main` Cloudflare
+# uznaje za „tylko statyczne zasoby" i nie pozwala ustawić zmiennych
+# środowiskowych. Worker poniżej obsługuje wyłącznie `/api/*`.
 name = "ktulu"
+main = "worker/index.ts"
 compatibility_date = "2026-08-31"
+
+# Zmienne ustawiane w panelu Cloudflare (RP_ID dla passkeyów) przeżywają
+# deploy tylko wtedy, gdy wrangler ich nie kasuje. Domyślnie plik konfiguracji
+# jest źródłem prawdy i wymiata wszystko, czego w nim nie ma.
+keep_vars = true
 
 [assets]
 directory = "./out"
+# Pozwala Workerowi oddać żądanie warstwie statycznej.
+binding = "ASSETS"
 # `trailingSlash: true` w Next daje /gra/index.html — auto-trailing-slash
 # serwuje to zarówno pod /gra, jak i /gra/.
 html_handling = "auto-trailing-slash"
 # Nieznany adres dostaje wyeksportowaną stronę 404 zamiast gołego błędu.
 not_found_handling = "404-page"
+# Bez tego /api/* nie pasowałoby do żadnego pliku i zamiast trafić do Workera
+# dostałoby stronę 404 z `not_found_handling`.
+run_worker_first = ["/api/*"]
+
+# Konta Manitou. Namespace powstaje sam przy deployu — nie ma nic do
+# zakładania w panelu ani identyfikatora do przepisania do konfiguracji.
+[[durable_objects.bindings]]
+name = "KONTA"
+class_name = "Konta"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Konta"]
