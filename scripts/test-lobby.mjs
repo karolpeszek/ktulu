@@ -184,6 +184,69 @@ const bezMarka = await zapytaj(`/api/pokoj/${kod}/wyrzuc`, {
 });
 sprawdz(bezMarka.tresc.gracze?.length === 1, "prowadzący wyrzuca gracza");
 
+// — rozdanie kart —
+{
+  const stanPrzed = await zapytaj(`/api/pokoj/${kod}/manitou`);
+  const kasia = stanPrzed.tresc.gracze.find((g) => g.nazwa === "Kasia");
+  sprawdz(kasia?.maKarte === false, "przed rozdaniem nikt nie ma karty");
+
+  const przedWydaniem = await zapytaj(`/api/pokoj/${kod}/ja`, {
+    headers: { "x-ktulu-gracz": "token-kasi" },
+  });
+  sprawdz(przedWydaniem.tresc.ja?.rola === null, "gracz nie widzi karty przed wydaniem");
+
+  const rozdane = await zapytaj(`/api/pokoj/${kod}/rozdaj`, {
+    method: "POST",
+    body: JSON.stringify({ przypisania: [{ gracz: kasia.id, rola: "szeryf" }] }),
+  });
+  sprawdz(rozdane.tresc.etap === "rozdane", "rozdanie przestawia etap");
+  sprawdz(
+    rozdane.tresc.gracze.find((g) => g.id === kasia.id)?.maKarte === true,
+    "prowadzący widzi, że karta została wydana"
+  );
+  sprawdz(
+    !JSON.stringify(rozdane.tresc).includes("szeryf"),
+    "widok prowadzącego nie wozi kart przez sieć — zna je ze swojego pulpitu"
+  );
+
+  const mojaKarta = await zapytaj(`/api/pokoj/${kod}/ja`, {
+    headers: { "x-ktulu-gracz": "token-kasi" },
+  });
+  sprawdz(mojaKarta.tresc.ja?.rola === "szeryf", "gracz dostaje własną kartę");
+  sprawdz(mojaKarta.tresc.ja?.widzial === null, "karta jeszcze niepotwierdzona");
+
+  const obcy = await zapytaj(`/api/pokoj/${kod}/ja`, {
+    headers: { "x-ktulu-gracz": "token-obcego" },
+  });
+  sprawdz(obcy.tresc.ja === null, "obcy klucz nie dostaje cudzej karty");
+  sprawdz(!JSON.stringify(obcy.tresc).includes("szeryf"), "w odpowiedzi dla obcego nie ma kart");
+
+  const potwierdzone = await zapytaj(`/api/pokoj/${kod}/widzialem`, {
+    method: "POST",
+    body: JSON.stringify({ token: "token-kasi" }),
+  });
+  sprawdz(potwierdzone.tresc.ja?.widzial !== null, "gracz potwierdza obejrzenie karty");
+
+  const uProwadzacego = await zapytaj(`/api/pokoj/${kod}/manitou`);
+  sprawdz(
+    uProwadzacego.tresc.gracze.find((g) => g.id === kasia.id)?.widzial !== null,
+    "prowadzący widzi potwierdzenie"
+  );
+
+  // — nowa runda tym samym składem —
+  const nowa = await zapytaj(`/api/pokoj/${kod}/nowa-runda`, { method: "POST" });
+  sprawdz(nowa.tresc.gracze.length === uProwadzacego.tresc.gracze.length, "skład przeżywa nową rundę");
+  sprawdz(nowa.tresc.gracze.every((g) => !g.maKarte), "karty znikają");
+  sprawdz(nowa.tresc.gracze.every((g) => g.widzial === null), "potwierdzenia się zerują");
+  sprawdz(nowa.tresc.gracze.every((g) => g.miejsce !== undefined), "miejsca zostają");
+
+  const poNowej = await zapytaj(`/api/pokoj/${kod}/ja`, {
+    headers: { "x-ktulu-gracz": "token-kasi" },
+  });
+  sprawdz(poNowej.tresc.ja?.rola === null, "telefon wraca do poczekalni");
+  sprawdz(poNowej.tresc.ja?.nazwa === "Kasia", "gracz nie musi wpisywać imienia od nowa");
+}
+
 // — cudzy pokój —
 const obcy = await zapytaj("/api/test/sesja", {
   method: "POST",

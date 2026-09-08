@@ -13,11 +13,18 @@ import Link from "next/link";
 import { Button, Card, inputCls } from "@/components/ui";
 import { MAKS_DLUGOSC_IMIENIA } from "@/lib/lobby";
 import { tozsamoscGracza } from "@/lib/tozsamosc";
+import KartaGracza from "./KartaGracza";
 
 interface StanGracza {
   kod: string;
   etap: "lobby" | "zamkniete" | "rozdane";
-  ja: { id: string; nazwa: string; miejsce: number | null } | null;
+  ja: {
+    id: string;
+    nazwa: string;
+    miejsce: number | null;
+    rola: string | null;
+    widzial: number | null;
+  } | null;
   imiona: string[];
 }
 
@@ -93,7 +100,21 @@ export default function Poczekalnia({ kod, wyjdz }: { kod: string; wyjdz: () => 
     }
   };
 
+  const potwierdz = async () => {
+    try {
+      const odp = await fetch(`/api/pokoj/${kod}/widzialem`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      if (odp.ok) setStan((await odp.json()) as StanGracza);
+    } catch {
+      /* potwierdzenie doleci przy następnym odpytaniu */
+    }
+  };
+
   const dolaczony = !!stan?.ja;
+  const karta = stan?.ja?.rola ?? null;
 
   return (
     <div className="w-full max-w-[380px] flex flex-col gap-4">
@@ -133,6 +154,13 @@ export default function Poczekalnia({ kod, wyjdz }: { kod: string; wyjdz: () => 
             </p>
           )}
         </Card>
+      ) : karta ? (
+        <KartaGracza
+          roleId={karta}
+          imie={stan!.ja!.nazwa}
+          potwierdzone={stan!.ja!.widzial !== null}
+          onPotwierdz={() => void potwierdz()}
+        />
       ) : (
         <Card>
           <div className="text-center">

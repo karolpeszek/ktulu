@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/store";
 import { usePrefs } from "@/lib/prefs";
 import { FACTION_LABEL } from "@/lib/types";
 import { ROLE_BY_ID } from "@/lib/roles";
 import { startNight } from "@/lib/resolve";
+import { zachowajSklad } from "@/lib/nowaGra";
+import { nowaRundaWZapamietanym } from "@/lib/pokoj";
 import { Badge, Button, Card, Empty, FACTION_COLOR, cx } from "@/components/ui";
 import NightPanel from "@/components/NightPanel";
 import DayPanel from "@/components/DayPanel";
@@ -80,8 +83,22 @@ export default function GamePage() {
 }
 
 function EndPanel() {
-  const { state, set, reset } = useGame();
+  const { state, set, reset, update } = useGame();
+  const router = useRouter();
   const w = state.winner;
+
+  /**
+   * Kolejna partia tym samym składem. W grze z lobby zeruje też pokój, więc
+   * nikt nie wpisuje kodu ani imienia od nowa — telefony same wracają do
+   * poczekalni i czekają na nowe karty.
+   */
+  const jeszczeRaz = async () => {
+    await nowaRundaWZapamietanym().catch(() => {
+      /* brak pokoju albo brak sieci — gra lokalna działa dalej */
+    });
+    update(zachowajSklad);
+    router.push("/manitou");
+  };
   const color = w ? FACTION_COLOR[w] : "var(--text-dim)";
     return (
       <div className="flex flex-col gap-4">
@@ -110,8 +127,15 @@ function EndPanel() {
               >
                 Graj dalej mimo to
               </Button>
-              <Button variant="primary" onClick={reset}>
-                Nowa gra
+              <Button variant="primary" onClick={() => void jeszczeRaz()}>
+                Jeszcze raz tym składem
+              </Button>
+              <Button
+                onClick={() => {
+                  if (confirm("Skasować rozgrywkę razem ze składem?")) reset();
+                }}
+              >
+                Nowa gra od zera
               </Button>
             </div>
           </div>

@@ -245,6 +245,13 @@ async function obsluzApi(
       return odpowiedz(await pokoj.stanDlaGracza(token));
     }
 
+    if (koncowka === "/widzialem" && post) {
+      const dane = await czytajJson(request);
+      const token = tokenGracza(dane);
+      if (!token) return json({ error: "Brak tożsamości gracza." }, 400);
+      return odpowiedz(await pokoj.potwierdz(token));
+    }
+
     // Wszystko poniżej należy do prowadzącego.
     const ja = await konta.ktoTo(sesja, konfiguracja.rpId);
     if (!ja) return json({ error: "Trzeba być zalogowanym." }, 401);
@@ -279,6 +286,20 @@ async function obsluzApi(
     if (koncowka === "/wyrzuc" && post) {
       const dane = await czytajJson(request);
       return odpowiedz(await pokoj.wyrzuc(ja.id, tekst(dane, "gracz")));
+    }
+
+    if (koncowka === "/rozdaj" && post) {
+      const dane = await czytajJson(request);
+      const surowe = Array.isArray(dane?.przypisania) ? dane.przypisania : [];
+      const przypisania = surowe
+        .map((x) => x as { gracz?: unknown; rola?: unknown })
+        .filter((x) => typeof x.gracz === "string" && typeof x.rola === "string")
+        .map((x) => ({ gracz: x.gracz as string, rola: x.rola as string }));
+      return odpowiedz(await pokoj.rozdaj(ja.id, przypisania));
+    }
+
+    if (koncowka === "/nowa-runda" && post) {
+      return odpowiedz(await pokoj.nowaRunda(ja.id));
     }
 
     if (koncowka === "/etap" && post) {
