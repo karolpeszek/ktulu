@@ -666,19 +666,36 @@ export interface DuelResult {
   overrideNote?: string;
 }
 
+/** Kto ginie w pojedynku: przegrany, obaj albo nikt. */
+export type DuelOutcome = "a" | "b" | "oba" | "nikt";
+
+/**
+ * Rozstrzyga pojedynek na samych liczbach, bez dotykania stanu gry.
+ *
+ * Głosy oddaje się ZA tym, kto ma przeżyć — ginie ten, za którym padło mniej
+ * głosów. Wynik "a" znaczy „przeżywa atakujący”, czyli ginie zaatakowany.
+ *
+ * Pulpit pokazuje z tego podgląd przed kliknięciem, więc reguła musi mieszkać
+ * w jednym miejscu — inaczej podpowiedź rozjechałaby się z rozstrzygnięciem.
+ */
+export function duelOutcome(d: Pick<DuelResult, "votesA" | "votesB" | "override">): DuelOutcome {
+  if (d.override === "a") return "a";
+  if (d.override === "b") return "b";
+  if (d.override === "remis") return "oba";
+  if (d.votesA === 0 && d.votesB === 0) return "nikt";
+  if (d.votesA > d.votesB) return "a";
+  if (d.votesB > d.votesA) return "b";
+  return "oba";
+}
+
 export function resolveDuel(prev: GameState, d: DuelResult): GameState {
   const s = clone(prev);
   s.duelsToday += 1;
   const a = playerById(s, d.aId)!;
   const b = playerById(s, d.bId)!;
-  let dead: string[] = [];
-  if (d.override === "a") dead = [d.bId];
-  else if (d.override === "b") dead = [d.aId];
-  else if (d.override === "remis") dead = [d.aId, d.bId];
-  else if (d.votesA === 0 && d.votesB === 0) dead = [];
-  else if (d.votesA > d.votesB) dead = [d.bId];
-  else if (d.votesB > d.votesA) dead = [d.aId];
-  else dead = [d.aId, d.bId];
+  const wynik = duelOutcome(d);
+  const dead: string[] =
+    wynik === "a" ? [d.bId] : wynik === "b" ? [d.aId] : wynik === "oba" ? [d.aId, d.bId] : [];
 
   log(
     s,

@@ -5,6 +5,7 @@ import { useGame } from "@/lib/store";
 import { GameState } from "@/lib/types";
 import { livingWithRole, nameOf, playerById, roleNameOf } from "@/lib/engine";
 import {
+  duelOutcome,
   resolveDuel,
   resolveHanging,
   resolvePoison,
@@ -29,6 +30,18 @@ export default function DayPanel() {
   const [searchDone, setSearchDone] = useState(false);
 
   const alive = state.players.filter((p) => p.alive).sort((a, b) => a.seat - b.seat);
+
+  // Podgląd pojedynku — ta sama funkcja, która potem naprawdę rozstrzyga.
+  const duelReady = !!duelA && !!duelB;
+  const duelWynik = duelReady ? duelOutcome({ votesA, votesB, override: override || null }) : null;
+  const ginacy =
+    duelWynik === "a"
+      ? [nameOf(state, duelB!)]
+      : duelWynik === "b"
+        ? [nameOf(state, duelA!)]
+        : duelWynik === "oba"
+          ? [nameOf(state, duelA!), nameOf(state, duelB!)]
+          : [];
   const sheriffAlive = !!livingWithRole(state, "szeryf");
   const mayorAlive = !!livingWithRole(state, "burmistrz");
 
@@ -123,7 +136,10 @@ export default function DayPanel() {
       >
         <p className="text-[12.5px] text-[var(--text-dim)] mb-3">
           Najpierw mowa atakującego, potem zaatakowanego — nikt inny nie ma prawa głosu. Potem
-          wszyscy poza pojedynkującymi głosują albo się wstrzymują.
+          wszyscy poza pojedynkującymi głosują albo się wstrzymują.{" "}
+          <strong className="text-[var(--text)]">
+            Głos oddaje się za tym, kto ma przeżyć — ginie ten, za którym padło mniej głosów.
+          </strong>
           {sheriffAlive && " Szeryf żyje, więc pojedynku można nie przyjąć."}
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -141,13 +157,16 @@ export default function DayPanel() {
                 </option>
               ))}
             </select>
+            <div className="label-xs mt-2.5 mb-1.5">
+              Chcą, żeby przeżył{duelA ? <>: {nameOf(state, duelA)}</> : " atakujący"}
+            </div>
             <input
               type="number"
               min={0}
-              className={cx(inputCls, "mt-2")}
+              inputMode="numeric"
+              className={inputCls}
               value={votesA}
               onChange={(e) => setVotesA(Math.max(0, Number(e.target.value) || 0))}
-              placeholder="Głosy za atakującym"
             />
           </div>
           <div>
@@ -166,13 +185,16 @@ export default function DayPanel() {
                   </option>
                 ))}
             </select>
+            <div className="label-xs mt-2.5 mb-1.5">
+              Chcą, żeby przeżył{duelB ? <>: {nameOf(state, duelB)}</> : " zaatakowany"}
+            </div>
             <input
               type="number"
               min={0}
-              className={cx(inputCls, "mt-2")}
+              inputMode="numeric"
+              className={inputCls}
               value={votesB}
               onChange={(e) => setVotesB(Math.max(0, Number(e.target.value) || 0))}
-              placeholder="Głosy za zaatakowanym"
             />
           </div>
         </div>
@@ -227,9 +249,25 @@ export default function DayPanel() {
           >
             Rozstrzygnij pojedynek
           </Button>
-          <span className="text-[12px] text-[var(--text-faint)]">
-            Remis głosów = giną obaj. Wszyscy wstrzymani = nikt nie ginie.
-          </span>
+          {duelReady ? (
+            <span
+              className="text-[12.5px]"
+              style={{ color: ginacy.length ? "var(--danger)" : "var(--text-dim)" }}
+            >
+              {ginacy.length ? (
+                <>
+                  Przy tych głosach ginie: <strong>{ginacy.join(" i ")}</strong>
+                  {duelWynik === "oba" && " — remis"}
+                </>
+              ) : (
+                "Przy tych głosach nie ginie nikt — wszyscy się wstrzymali."
+              )}
+            </span>
+          ) : (
+            <span className="text-[12px] text-[var(--text-faint)]">
+              Remis głosów = giną obaj. Wszyscy wstrzymani = nikt nie ginie.
+            </span>
+          )}
         </div>
       </Card>
 
