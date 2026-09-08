@@ -36,6 +36,7 @@ export default function Poczekalnia({ kod, wyjdz }: { kod: string; wyjdz: () => 
   const [nazwa, setNazwa] = useState("");
   const [blad, setBlad] = useState<string | null>(null);
   const [trwa, setTrwa] = useState(false);
+  const [zniknal, setZniknal] = useState(false);
   // Klucz powstaje raz, przy pierwszym renderze dla danego pokoju — leniwa
   // wartość początkowa zamiast referencji, bo tej nie wolno czytać w renderze.
   const [token] = useState(() => tozsamoscGracza(kod));
@@ -46,7 +47,14 @@ export default function Poczekalnia({ kod, wyjdz }: { kod: string; wyjdz: () => 
         headers: { "x-ktulu-gracz": token },
       });
       const dane = await odp.json().catch(() => ({}));
-      if (odp.ok) setStan(dane as StanGracza);
+      if (odp.ok) {
+        setStan(dane as StanGracza);
+        setZniknal(false);
+      } else if (odp.status === 404) {
+        // Pokój skasowany przez prowadzącego albo wygasły po dobie. Mówimy
+        // o tym wprost, zamiast po cichu wyrzucać z powrotem do wpisywania kodu.
+        setZniknal(true);
+      }
     } catch {
       /* chwilowy brak sieci — spróbujemy przy następnym odpytaniu */
     }
@@ -115,6 +123,25 @@ export default function Poczekalnia({ kod, wyjdz }: { kod: string; wyjdz: () => 
 
   const dolaczony = !!stan?.ja;
   const karta = stan?.ja?.rola ?? null;
+
+  if (zniknal) {
+    return (
+      <div className="w-full max-w-[380px] flex flex-col gap-4">
+        <Card>
+          <div className="text-center py-2">
+            <div className="text-[15px] font-semibold">Ten pokój już nie istnieje</div>
+            <p className="text-[13px] text-[var(--text-dim)] leading-relaxed mt-2">
+              Prowadzący go zamknął albo minęła doba od założenia. Jeśli gracie dalej, poproś
+              o nowy kod.
+            </p>
+          </div>
+          <Button variant="primary" className="w-full justify-center mt-3" onClick={wyjdz}>
+            Wpisz inny kod
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[380px] flex flex-col gap-4">
