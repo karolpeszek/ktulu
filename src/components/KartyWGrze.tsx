@@ -40,6 +40,36 @@ export default function KartyWGrze({
 
   return (
     <>
+      {ujawnieni.length > 0 && (
+        <Card title="Kto już odpadł">
+          <div className="flex flex-col gap-1.5">
+            {ujawnieni.map((u, i) => {
+              const r = ROLE_BY_ID[u.rola];
+              const kolor = r ? FACTION_COLOR[r.faction] : "var(--text-dim)";
+              return (
+                <button
+                  key={`${u.imie}-${i}`}
+                  type="button"
+                  onClick={() => r && setPodglad(u.rola)}
+                  className="ui-row flex items-center gap-2.5 text-left w-full"
+                >
+                  <span className="text-[16px] leading-none" aria-hidden>
+                    💀
+                  </span>
+                  <span className="text-[14px] font-semibold">{u.imie}</span>
+                  <span className="text-[13px] ml-auto text-right" style={{ color: kolor }}>
+                    {r?.name ?? u.rola}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[12px] text-[var(--text-faint)] leading-relaxed">
+            Karty odkryte przy stole. Dotknij, żeby przypomnieć sobie, co robiła dana postać.
+          </p>
+        </Card>
+      )}
+
       <Card title="Karty w tej grze">
         <div className="flex flex-col gap-1">
           {[...zliczone.entries()]
@@ -66,7 +96,7 @@ export default function KartyWGrze({
                   )}
                   {martwi.length > 0 && (
                     <span className="text-[12px] ml-auto text-right" style={{ color: kolor }}>
-                      {martwi.map((imie) => `† ${imie}`).join(", ")}
+                      {martwi.map((imie) => `💀 ${imie}`).join(", ")}
                     </span>
                   )}
                 </button>
@@ -74,7 +104,8 @@ export default function KartyWGrze({
             })}
         </div>
         <p className="mt-2 text-[12px] text-[var(--text-faint)] leading-relaxed">
-          Dotknij karty, żeby przeczytać, co robi. Imię pojawia się przy karcie odkrytej po śmierci.
+          Dotknij karty, żeby przeczytać, co robi. Przy karcie odkrytej po czyjejś śmierci pojawia
+          się czaszka i imię.
         </p>
       </Card>
 
@@ -95,8 +126,8 @@ export default function KartyWGrze({
             </div>
             <h2 className="text-[24px] font-bold leading-tight mt-1">{rola.name}</h2>
             {imionaDla(rola.id).length > 0 && (
-              <div className="text-[13px] mt-1" style={{ color: FACTION_COLOR[rola.faction] }}>
-                {imionaDla(rola.id).map((imie) => `† ${imie}`).join(", ")}
+              <div className="text-[13.5px] mt-1 font-medium" style={{ color: FACTION_COLOR[rola.faction] }}>
+                {imionaDla(rola.id).map((imie) => `💀 ${imie}`).join(", ")}
               </div>
             )}
             <p className="text-[13.5px] leading-relaxed mt-3">{rola.desc}</p>

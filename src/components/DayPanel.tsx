@@ -14,6 +14,7 @@ import {
 } from "@/lib/resolve";
 import { Badge, Button, Card, Empty, cx, inputCls } from "./ui";
 import SeatArc, { SeatLegend } from "./SeatArc";
+import { PrzyciskUjawnien } from "./PanelUjawnien";
 
 export default function DayPanel() {
   const { state, set } = useGame();
@@ -104,6 +105,8 @@ export default function DayPanel() {
             ))}
           </ul>
         )}
+        <PrzyciskUjawnien etykieta="Ujawnij karty nocnych ofiar" />
+
         {state.day === 1 && (
           <p className="mt-3 text-[12.5px] text-[var(--text-dim)]">
             Pierwszy dzień: wszyscy przedstawiają się sobie nawzajem („Nazywam się Bill i jestem
@@ -269,6 +272,8 @@ export default function DayPanel() {
             </span>
           )}
         </div>
+
+        <PrzyciskUjawnien etykieta="Ujawnij kartę poległego" />
       </Card>
 
       {/* — przeszukanie — */}
@@ -381,6 +386,8 @@ export default function DayPanel() {
             </label>
           )}
         </div>
+
+        <PrzyciskUjawnien etykieta="Ujawnij kartę powieszonego" />
       </Card>
 
       <Card title="Krąg rady">
