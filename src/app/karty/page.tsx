@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useGame } from "@/lib/store";
 import { FACTION_GOAL, FACTION_LABEL, Faction } from "@/lib/types";
 import { ROLE_BY_ID, ROLES } from "@/lib/roles";
 import { shuffle } from "@/lib/setup";
-import { Badge, Button, Card, Empty, Toggle, cx } from "@/components/ui";
+import { Badge, Button, Card, Toggle, cx } from "@/components/ui";
 
 /** Kolory frakcji na papierze — wersje z jasnego motywu. */
 const PRINT_COLOR: Record<Faction, string> = {
@@ -26,12 +27,15 @@ const NIGHT_LABEL: Record<string, string> = {
   warunkowa: "budzisz się warunkowo",
 };
 
+/** Co idzie na wydruk: karty rozdane graczom albo cała talia po jednej sztuce. */
+type Tryb = "rozdanie" | "talia";
+
 export default function CardsPage() {
   const { state, loaded } = useGame();
   const [withNames, setWithNames] = useState(true);
   const [shuffled, setShuffled] = useState(false);
   const [withCheatSheet, setWithCheatSheet] = useState(true);
-  const [allCardsPdf, setAllCardsPdf] = useState(false);
+  const [tryb, setTryb] = useState<Tryb>("rozdanie");
   const [seed, setSeed] = useState(0);
 
   const players = useMemo(() => {
@@ -44,23 +48,20 @@ export default function CardsPage() {
   if (!loaded) return null;
 
   const assigned = players.filter((p) => p.roleId);
-  const printable = allCardsPdf
+  // Pełną talię da się wydrukować zawsze — rozdanie dopiero po przydzieleniu kart.
+  const rozdanieGotowe = assigned.length > 0;
+  const wydruk: Tryb = rozdanieGotowe ? tryb : "talia";
+  const talia = wydruk === "talia";
+
+  const printable = talia
     ? ROLES.map((role) => ({ key: role.id, role, playerName: null as string | null }))
     : assigned.map((p) => ({ key: p.id, role: ROLE_BY_ID[p.roleId!], playerName: p.name }));
 
-  if (assigned.length === 0 && !allCardsPdf) {
-    return (
-      <Card title="Karteczki do druku">
-        <Empty>
-          Najpierw rozdaj role.{" "}
-          <Link href="/" className="text-[var(--accent)] underline">
-            Przejdź do przygotowania gry
-          </Link>
-          .
-        </Empty>
-      </Card>
-    );
-  }
+  /** Przełącza podgląd i dopiero po jego przerysowaniu otwiera okno drukowania. */
+  const drukuj = (t: Tryb) => {
+    flushSync(() => setTryb(t));
+    window.print();
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -70,45 +71,83 @@ export default function CardsPage() {
         right={
           <div className="flex items-center gap-2">
             <Badge>{printable.length} kart</Badge>
-            <Button variant="primary" onClick={() => window.print()}>
-              Drukuj / zapisz PDF
+            <Button
+              variant={talia ? "default" : "primary"}
+              disabled={!rozdanieGotowe}
+              title={
+                rozdanieGotowe
+                  ? "Karty rozdane graczom, z imionami"
+                  : "Najpierw rozdaj role w przygotowaniu gry"
+              }
+              onClick={() => drukuj("rozdanie")}
+            >
+              Drukuj rozdanie
+            </Button>
+            <Button
+              variant={talia ? "primary" : "default"}
+              title="Wszystkie karty z gry, po jednej sztuce — do zalaminowania na stałe"
+              onClick={() => drukuj("talia")}
+            >
+              Drukuj pełną talię
             </Button>
           </div>
         }
       >
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <Toggle checked={withNames} onChange={setWithNames} label="Imię gracza na karcie" disabled={allCardsPdf} />
-          <Toggle
-            checked={shuffled}
-            onChange={(v) => {
-              setShuffled(v);
-              setSeed((x) => x + 1);
-            }}
-            label="Wymieszaj kolejność (rozdanie na ślepo)"
-            disabled={allCardsPdf}
-          />
-          <Toggle
-            checked={allCardsPdf}
-            onChange={setAllCardsPdf}
-            label="Wydruk pełnej talii (wszystkie role, po 1 szt.)"
-          />
-          <Toggle
-            checked={withCheatSheet}
-            onChange={setWithCheatSheet}
-            label="Dołącz ściągę Manitou"
-            disabled={allCardsPdf}
-          />
-          {shuffled && !allCardsPdf && (
-            <Button size="sm" onClick={() => setSeed((x) => x + 1)}>
-              Przetasuj ponownie
-            </Button>
-          )}
-        </div>
+        {talia ? (
+          <p className="text-[12.5px] text-[var(--text-dim)] leading-relaxed">
+            Podgląd pokazuje <strong className="text-[var(--text)]">pełną talię</strong>: każdą kartę
+            z gry po jednej sztuce, bez imion i bez ściągi.{" "}
+            {rozdanieGotowe ? (
+              <>
+                Ustawienia rozdania —{" "}
+                <button
+                  type="button"
+                  onClick={() => setTryb("rozdanie")}
+                  className="text-[var(--accent)] underline"
+                >
+                  wróć do jego podglądu
+                </button>
+                , żeby je zobaczyć.
+              </>
+            ) : (
+              <>
+                Rozdanie wydrukujesz po przydzieleniu kart w{" "}
+                <Link href="/" className="text-[var(--accent)] underline">
+                  przygotowaniu gry
+                </Link>
+                .
+              </>
+            )}
+          </p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <Toggle checked={withNames} onChange={setWithNames} label="Imię gracza na karcie" />
+            <Toggle
+              checked={shuffled}
+              onChange={(v) => {
+                setShuffled(v);
+                setSeed((x) => x + 1);
+              }}
+              label="Wymieszaj kolejność (rozdanie na ślepo)"
+            />
+            <Toggle
+              checked={withCheatSheet}
+              onChange={setWithCheatSheet}
+              label="Dołącz ściągę Manitou"
+            />
+            {shuffled && (
+              <Button size="sm" onClick={() => setSeed((x) => x + 1)}>
+                Przetasuj ponownie
+              </Button>
+            )}
+          </div>
+        )}
         <p className="mt-3 text-[12px] text-[var(--text-dim)] leading-relaxed">
           W oknie drukowania wybierz „Zapisz jako PDF”, format A4, marginesy domyślne i wyłącz
           nagłówki strony. Sześć karteczek (90 × 88 mm) na stronę, linie cięcia zaznaczone
-          przerywaną ramką. {allCardsPdf ? "Pełna talia nadaje się do zalaminowania na wiele rozgrywek." : ""}
-          {withCheatSheet && !allCardsPdf && " Ściąga Manitou drukuje się na osobnej, ostatniej stronie."}
+          przerywaną ramką.
+          {talia && " Pełna talia nadaje się do zalaminowania na wiele rozgrywek."}
+          {!talia && withCheatSheet && " Ściąga Manitou drukuje się na osobnej, ostatniej stronie."}
         </p>
       </Card>
 
@@ -123,7 +162,9 @@ export default function CardsPage() {
                   <span className="faction" style={{ color }}>
                     {role.faction === "janosik" ? "Frakcja własna" : FACTION_LABEL[role.faction]}
                   </span>
-                  {!allCardsPdf && withNames && card.playerName && <span className="player">{card.playerName}</span>}
+                  {!talia && withNames && card.playerName && (
+                    <span className="player">{card.playerName}</span>
+                  )}
                 </header>
                 <h2 className="role">{role.name}</h2>
                 <p className="desc">{role.desc}</p>
@@ -138,7 +179,7 @@ export default function CardsPage() {
           })}
         </div>
 
-        {withCheatSheet && !allCardsPdf && (
+        {withCheatSheet && !talia && (
           <section className="cheat">
             <h2>Ściąga Manitou — kto jest kim</h2>
             <table>

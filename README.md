@@ -138,12 +138,14 @@ gotowe binaria) trzyma pole `pnpm.ignoredBuiltDependencies` w `package.json`.
 - panel korekty ręcznej: Manitou zawsze może nadpisać stan gry i ogłosić dowolne zwycięstwo.
 
 **Karteczki (`/karty`)**
-- karty do rozcięcia dla każdego gracza: frakcja, nazwa roli, pełny opis zdolności i cel frakcji,
-  sześć sztuk (90 × 88 mm) na stronie A4 z liniami cięcia,
-- opcje: imię gracza na karcie (albo bez — do rozdania na ślepo), wymieszanie kolejności,
-  dołączona ściąga Manitou „kto jest kim” na osobnej stronie,
-- dodatkowo: wydruk pełnej talii (wszystkie role, po 1 sztuce) do PDF pod laminowanie,
-- „Drukuj / zapisz PDF” otwiera okno drukowania przeglądarki — wybierz „Zapisz jako PDF”.
+- karty do rozcięcia: frakcja, nazwa roli, pełny opis zdolności i cel frakcji, sześć sztuk
+  (90 × 88 mm) na stronie A4 z liniami cięcia,
+- dwa osobne wydruki: **Drukuj rozdanie** — karty przydzielone graczom, z imionami, opcjonalnie
+  wymieszane i ze ściągą Manitou „kto jest kim” na osobnej stronie; **Drukuj pełną talię** — każda
+  karta z gry po jednej sztuce, bez imion, pod laminowanie,
+- pełna talia jest dostępna zawsze, także zanim powstanie rozgrywka; rozdanie dopiero po
+  przydzieleniu kart,
+- oba przyciski otwierają okno drukowania przeglądarki — wybierz w nim „Zapisz jako PDF”.
 
 **Ustawienia (`/ustawienia`)** — motyw (auto / jasny / ciemny), rozmiar elementów (zwykły / dotyk)
 i ręka trzymająca rysik. Tryb dotykowy powiększa cele kliknięcia i pokazuje od razu sterowanie,
