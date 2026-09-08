@@ -13,6 +13,7 @@ import { KontekstWebAuthn, Wynik } from "./konta";
 import type { Env } from "./srodowisko";
 
 export { Konta } from "./konta";
+export { Pokoj } from "./pokoj";
 export type { Env };
 
 const CIASTKO_SESJI = "ktulu_sesja";

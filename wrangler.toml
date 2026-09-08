@@ -31,6 +31,14 @@ run_worker_first = ["/api/*"]
 name = "KONTA"
 class_name = "Konta"
 
+# Pokój gry jest tu już teraz, choć lobby powstaje w kolejnym kroku: zmiany
+# cyklu życia Durable Objectów przechodzą wyłącznie pełnym `wrangler deploy`,
+# a podglądy gałęzi używają `versions upload`, które je odrzuca. Obie klasy
+# w jednej migracji oznaczają, że koszt ponosimy raz.
+[[durable_objects.bindings]]
+name = "POKOJE"
+class_name = "Pokoj"
+
 [[migrations]]
 tag = "v1"
-new_sqlite_classes = ["Konta"]
+new_sqlite_classes = ["Konta", "Pokoj"]
