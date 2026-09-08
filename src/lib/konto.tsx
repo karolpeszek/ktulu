@@ -37,6 +37,8 @@ interface Ctx {
    */
   trybLokalny: boolean;
   ustawTrybLokalny: (v: boolean) => void;
+  /** Czy korzystamy z funkcji sieciowych. Bez konta jest to niemożliwe. */
+  trybOnline: boolean;
   /** Prawda, dopóki nie istnieje ani jedno konto — trwa tryb bootstrapowy. */
   pusto: boolean;
   polaczenie: StanPolaczenia;
@@ -52,6 +54,44 @@ interface Ctx {
 const KontoCtx = createContext<Ctx | null>(null);
 
 const KLUCZ_TRYBU = "ktulu.tryb.lokalny";
+
+/**
+ * Wybór trybu trzymamy poza Reactem i czytamy synchronicznie.
+ *
+ * Jest to potrzebne, żeby ktoś, kto raz zdecydował się prowadzić grę bez
+ * konta, wchodził na pulpit od razu — bez czekania, aż odpowie serwer.
+ * Przy ognisku bez zasięgu to różnica między działającą aplikacją a ekranem
+ * „Sprawdzanie konta…” wiszącym do timeoutu.
+ */
+const sluchacze = new Set<() => void>();
+
+function subskrybujTryb(cb: () => void): () => void {
+  sluchacze.add(cb);
+  return () => {
+    sluchacze.delete(cb);
+  };
+}
+
+function odczytajTryb(): boolean {
+  try {
+    return localStorage.getItem(KLUCZ_TRYBU) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function zapiszTryb(lokalny: boolean): void {
+  try {
+    if (lokalny) localStorage.setItem(KLUCZ_TRYBU, "1");
+    else localStorage.removeItem(KLUCZ_TRYBU);
+  } catch {
+    /* wybór przepadnie po odświeżeniu, ale sesja działa */
+  }
+  for (const cb of sluchacze) cb();
+}
+
+/** Ile czekamy na serwer, zanim uznamy, że jesteśmy offline. */
+const LIMIT_SPRAWDZENIA_MS = 3500;
 
 /** Rzuca wyjątkiem z komunikatem serwera, żeby ekran mógł go pokazać wprost. */
 async function api<T>(sciezka: string, opcje: RequestInit = {}): Promise<T> {
@@ -70,11 +110,16 @@ export function KontoProvider({ children }: { children: React.ReactNode }) {
   const [pusto, setPusto] = useState(false);
   const [polaczenie, setPolaczenie] = useState<StanPolaczenia>("sprawdzanie");
   const [powodNiedostepnosci, setPowod] = useState<string | null>(null);
-  const [trybLokalny, setTrybLokalny] = useState(false);
+  const trybLokalny = useSyncExternalStore(subskrybujTryb, odczytajTryb, () => false);
 
   const odswiez = useCallback(async () => {
     try {
-      const odp = await fetch("/api/auth/stan", { credentials: "same-origin" });
+      const odp = await fetch("/api/auth/stan", {
+        credentials: "same-origin",
+        // Bez limitu zawieszona sieć (portal hotelowy, słabe wifi) trzymałaby
+        // pulpit na ekranie ładowania w nieskończoność.
+        signal: AbortSignal.timeout(LIMIT_SPRAWDZENIA_MS),
+      });
       const dane = (await odp.json().catch(() => ({}))) as {
         pusto?: boolean;
         uzytkownik?: Uzytkownik | null;
@@ -102,23 +147,14 @@ export function KontoProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (localStorage.getItem(KLUCZ_TRYBU) === "1") setTrybLokalny(true);
-    } catch {
-      /* brak dostępu do pamięci nie może wywrócić startu */
-    }
+    // Reguła widzi setState wewnątrz wołanej funkcji, ale wykonuje się on
+    // dopiero po `await fetch`, więc kaskady renderów tu nie ma.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void odswiez();
   }, [odswiez]);
 
   const ustawTrybLokalny = useCallback((v: boolean) => {
-    setTrybLokalny(v);
-    try {
-      if (v) localStorage.setItem(KLUCZ_TRYBU, "1");
-      else localStorage.removeItem(KLUCZ_TRYBU);
-    } catch {
-      /* wybór przepadnie po odświeżeniu, ale sesja działa */
-    }
+    zapiszTryb(v);
   }, []);
 
   const zaloguj = useCallback(async () => {
@@ -133,6 +169,7 @@ export function KontoProvider({ children }: { children: React.ReactNode }) {
     });
     setUzytkownik(wynik.uzytkownik);
     setPolaczenie("online");
+    zapiszTryb(false);
   }, []);
 
   const zarejestruj = useCallback(async (kod: string, nazwa: string) => {
@@ -148,6 +185,7 @@ export function KontoProvider({ children }: { children: React.ReactNode }) {
     setUzytkownik(wynik.uzytkownik);
     setPusto(false);
     setPolaczenie("online");
+    zapiszTryb(false);
   }, []);
 
   const dodajKlucz = useCallback(async () => {
@@ -166,6 +204,8 @@ export function KontoProvider({ children }: { children: React.ReactNode }) {
   const wyloguj = useCallback(async () => {
     await fetch("/api/auth/wyloguj", { method: "POST", credentials: "same-origin" }).catch(() => {});
     setUzytkownik(null);
+    // Po wylogowaniu konsola ma dalej działać, tylko bez lobby.
+    zapiszTryb(true);
   }, []);
 
   return (
@@ -177,6 +217,7 @@ export function KontoProvider({ children }: { children: React.ReactNode }) {
         powodNiedostepnosci,
         trybLokalny,
         ustawTrybLokalny,
+        trybOnline: !!uzytkownik && !trybLokalny,
         odswiez,
         zaloguj,
         zarejestruj,
@@ -196,7 +237,7 @@ export function useKonto(): Ctx {
 }
 
 /**
- * Czy przeglądarka w ogóle umie passkeye — Safari w trybie lockdown nie umie.
+ * Czy przeglądarka w ogóle umie passkeye.
  *
  * To informacja o środowisku, nie stan Reacta, więc czytamy ją przez
  * useSyncExternalStore. Wartość dla serwera jest optymistyczna: przy eksporcie

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useGame } from "@/lib/store";
 import { useKonto } from "@/lib/konto";
-import { cx, Badge } from "./ui";
+import { cx, Badge, Toggle, Tooltip } from "./ui";
 
 const NAV = [
   { href: "/manitou", label: "Przygotowanie" },
@@ -17,7 +17,7 @@ const NAV = [
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const { state, loaded } = useGame();
-  const { uzytkownik, trybLokalny } = useKonto();
+  const { uzytkownik, trybOnline, ustawTrybLokalny, polaczenie } = useKonto();
 
   const phase =
     state.stage === "setup"
@@ -61,16 +61,46 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <Link
-            href="/manitou/konto"
-            className={cx(
-              "text-[12.5px] px-2 py-1 rounded-[6px] hover:bg-[var(--surface-2)]",
-              path === "/manitou/konto" ? "text-[var(--text)]" : "text-[var(--text-dim)]"
-            )}
-            title={uzytkownik ? "Konto i klucze" : "Zaloguj się, żeby korzystać z lobby"}
+          {/* Tryb online wymaga konta — bez niego przełącznik jest wyłączony,
+              a dymek mówi dlaczego, zamiast zostawiać martwy element. */}
+          <Tooltip
+            content={
+              uzytkownik
+                ? trybOnline
+                  ? "Gracze mogą dołączać kodem, karty rozdajesz na ich telefony."
+                  : "Gra tylko na tym urządzeniu — karteczki do druku, bez lobby."
+                : polaczenie === "online"
+                  ? "Wymaga zalogowania."
+                  : "Wymaga zalogowania i połączenia z serwerem."
+            }
           >
-            {uzytkownik ? uzytkownik.nazwa : trybLokalny ? "Bez konta" : "Konto"}
-          </Link>
+            <Toggle
+              checked={trybOnline}
+              disabled={!uzytkownik}
+              onChange={(v) => ustawTrybLokalny(!v)}
+              label="Tryb online"
+            />
+          </Tooltip>
+
+          {uzytkownik ? (
+            <Link
+              href="/manitou/konto"
+              className={cx(
+                "text-[12.5px] px-2 py-1 rounded-[6px] hover:bg-[var(--surface-2)]",
+                path === "/manitou/konto" ? "text-[var(--text)]" : "text-[var(--text-dim)]"
+              )}
+              title="Konto i klucze"
+            >
+              {uzytkownik.nazwa}
+            </Link>
+          ) : (
+            <Link
+              href="/manitou/logowanie"
+              className="text-[12.5px] px-2 py-1 rounded-[6px] text-[var(--accent)] hover:bg-[var(--surface-2)]"
+            >
+              Zaloguj się
+            </Link>
+          )}
           {loaded && state.players.length > 0 && (
             <>
               <Badge>{`${state.players.filter((p) => p.alive).length} żywych`}</Badge>

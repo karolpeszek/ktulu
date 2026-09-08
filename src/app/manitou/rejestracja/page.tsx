@@ -86,6 +86,7 @@ export default function RejestracjaPage() {
           {!umiePasskeye && (
             <p className="text-[12.5px] mt-3" style={{ color: "var(--warn)" }}>
               Ta przeglądarka nie obsługuje kluczy dostępu, więc konta nie da się tu założyć.
+              Spróbuj z innej.
             </p>
           )}
           {polaczenie !== "online" && (

@@ -23,7 +23,11 @@ export default function ManitouLayout({ children }: { children: React.ReactNode 
 
   const otwarte = OTWARTE.some((p) => sciezka.startsWith(p));
   const wolno = otwarte || !!uzytkownik || trybLokalny;
-  const sprawdzanie = polaczenie === "sprawdzanie";
+  // Kto raz wybrał pracę bez konta, wchodzi od razu — czekanie na serwer
+  // miałoby sens tylko po to, żeby dowiedzieć się czegoś, co i tak nie zmieni
+  // decyzji. Przy braku zasięgu to różnica między działającą aplikacją
+  // a ekranem ładowania wiszącym do timeoutu.
+  const sprawdzanie = polaczenie === "sprawdzanie" && !wolno;
 
   useEffect(() => {
     if (!sprawdzanie && !wolno) router.replace("/manitou/logowanie");

@@ -58,8 +58,8 @@ export default function LogowaniePage() {
           )}
           {!umiePasskeye && (
             <p className="text-[12.5px] mb-3" style={{ color: "var(--warn)" }}>
-              Ta przeglądarka nie obsługuje kluczy dostępu. Na iPadzie w trybie lockdown trzeba go
-              wyłączyć dla tej strony.
+              Ta przeglądarka nie obsługuje kluczy dostępu. Zaloguj się z innej albo pracuj bez
+              konta.
             </p>
           )}
 
