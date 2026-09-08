@@ -9,6 +9,7 @@
     "preview": "pnpm dlx serve out -l 4173",
     "dev:worker": "pnpm dlx wrangler dev",
     "deploy": "pnpm run build && pnpm dlx wrangler deploy",
+    "deploy:podglad": "npx wrangler versions upload --preview-alias $(node scripts/alias-podgladu.mjs)",
     "icons": "node scripts/gen-icons.mjs",
     "lint": "eslint",
     "test": "node --import tsx --test tests/*.test.ts",
