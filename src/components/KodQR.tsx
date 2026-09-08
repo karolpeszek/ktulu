@@ -13,12 +13,16 @@ import qrcode from "qrcode-generator";
 
 export default function KodQR({
   tresc,
-  rozmiar = 240,
   opis,
+  className,
 }: {
   tresc: string;
-  rozmiar?: number;
   opis?: string;
+  /**
+   * Rozmiar ustala kontener, nie komponent — kod ma wypełniać przydzieloną
+   * powierzchnię, a ta zależy od wielkości ekranu, na którym się go pokazuje.
+   */
+  className?: string;
 }) {
   const { sciezka, bok } = useMemo(() => {
     // Typ 0 dobiera najmniejszą wersję mieszczącą treść; korekcja „M” znosi
@@ -42,8 +46,9 @@ export default function KodQR({
 
   return (
     <svg
-      width={rozmiar}
-      height={rozmiar}
+      className={className}
+      width="100%"
+      height="100%"
       viewBox={`0 0 ${cale} ${cale}`}
       role="img"
       aria-label={opis ?? "Kod QR"}
