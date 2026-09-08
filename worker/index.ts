@@ -298,6 +298,14 @@ async function obsluzApi(
       return odpowiedz(await pokoj.rozdaj(ja.id, przypisania));
     }
 
+    if (koncowka === "/ujawnij" && post) {
+      const dane = await czytajJson(request);
+      const gracze = Array.isArray(dane?.gracze)
+        ? (dane.gracze as unknown[]).filter((x): x is string => typeof x === "string")
+        : [];
+      return odpowiedz(await pokoj.ujawnij(ja.id, gracze));
+    }
+
     if (koncowka === "/nowa-runda" && post) {
       return odpowiedz(await pokoj.nowaRunda(ja.id));
     }

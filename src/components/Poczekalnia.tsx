@@ -14,6 +14,7 @@ import { Button, Card, inputCls } from "@/components/ui";
 import { MAKS_DLUGOSC_IMIENIA } from "@/lib/lobby";
 import { tozsamoscGracza } from "@/lib/tozsamosc";
 import KartaGracza from "./KartaGracza";
+import KartyWGrze from "./KartyWGrze";
 
 interface StanGracza {
   kod: string;
@@ -26,6 +27,8 @@ interface StanGracza {
     widzial: number | null;
   } | null;
   imiona: string[];
+  sklad: string[];
+  ujawnieni: { rola: string; imie: string }[];
 }
 
 /** Jak często pytamy serwer, gdy ekran jest na wierzchu. */
@@ -36,6 +39,7 @@ export default function Poczekalnia({ kod, wyjdz }: { kod: string; wyjdz: () => 
   const [nazwa, setNazwa] = useState("");
   const [blad, setBlad] = useState<string | null>(null);
   const [trwa, setTrwa] = useState(false);
+  const [zniknal, setZniknal] = useState(false);
   // Klucz powstaje raz, przy pierwszym renderze dla danego pokoju — leniwa
   // wartość początkowa zamiast referencji, bo tej nie wolno czytać w renderze.
   const [token] = useState(() => tozsamoscGracza(kod));
@@ -46,7 +50,14 @@ export default function Poczekalnia({ kod, wyjdz }: { kod: string; wyjdz: () => 
         headers: { "x-ktulu-gracz": token },
       });
       const dane = await odp.json().catch(() => ({}));
-      if (odp.ok) setStan(dane as StanGracza);
+      if (odp.ok) {
+        setStan(dane as StanGracza);
+        setZniknal(false);
+      } else if (odp.status === 404) {
+        // Pokój skasowany przez prowadzącego albo wygasły po dobie. Mówimy
+        // o tym wprost, zamiast po cichu wyrzucać z powrotem do wpisywania kodu.
+        setZniknal(true);
+      }
     } catch {
       /* chwilowy brak sieci — spróbujemy przy następnym odpytaniu */
     }
@@ -116,6 +127,25 @@ export default function Poczekalnia({ kod, wyjdz }: { kod: string; wyjdz: () => 
   const dolaczony = !!stan?.ja;
   const karta = stan?.ja?.rola ?? null;
 
+  if (zniknal) {
+    return (
+      <div className="w-full max-w-[380px] flex flex-col gap-4">
+        <Card>
+          <div className="text-center py-2">
+            <div className="text-[15px] font-semibold">Ten pokój już nie istnieje</div>
+            <p className="text-[13px] text-[var(--text-dim)] leading-relaxed mt-2">
+              Prowadzący go zamknął albo minęła doba od założenia. Jeśli gracie dalej, poproś
+              o nowy kod.
+            </p>
+          </div>
+          <Button variant="primary" className="w-full justify-center mt-3" onClick={wyjdz}>
+            Wpisz inny kod
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-[380px] flex flex-col gap-4">
       <div className="text-center">
@@ -155,12 +185,15 @@ export default function Poczekalnia({ kod, wyjdz }: { kod: string; wyjdz: () => 
           )}
         </Card>
       ) : karta ? (
-        <KartaGracza
-          roleId={karta}
-          imie={stan!.ja!.nazwa}
-          potwierdzone={stan!.ja!.widzial !== null}
-          onPotwierdz={() => void potwierdz()}
-        />
+        <>
+          <KartaGracza
+            roleId={karta}
+            imie={stan!.ja!.nazwa}
+            potwierdzone={stan!.ja!.widzial !== null}
+            onPotwierdz={() => void potwierdz()}
+          />
+          <KartyWGrze sklad={stan!.sklad} ujawnieni={stan!.ujawnieni} />
+        </>
       ) : (
         <Card>
           <div className="text-center">

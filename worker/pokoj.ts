@@ -34,6 +34,8 @@ export interface GraczWPokoju {
   maKarte: boolean;
   /** Kiedy potwierdził, że ją obejrzał — po tym Manitou wie, że można zaczynać. */
   widzial: number | null;
+  /** Czy jego karta została odkryta po śmierci. */
+  ujawniony: boolean;
 }
 
 export interface StanPokoju {
@@ -58,6 +60,13 @@ export interface StanGracza {
   } | null;
   /** Imiona pozostałych — jawne i tak, bo wszyscy siedzą przy jednym stole. */
   imiona: string[];
+  /**
+   * Karty biorące udział w tej rozgrywce, w kolejności niezależnej od miejsc
+   * przy stole — sam skład jest jawny, ale nie może zdradzać, kto gdzie siedzi.
+   */
+  sklad: string[];
+  /** Karty odkryte po śmierci: rola i imię, w kolejności ujawniania. */
+  ujawnieni: { rola: string; imie: string }[];
 }
 
 export type Wynik<T> = { ok: true; dane: T } | { ok: false; powod: string; status: number };
@@ -76,6 +85,7 @@ interface WierszGracza extends Record<string, SqlStorageValue> {
   token: string;
   rola: string | null;
   widzial: number | null;
+  ujawniony: number | null;
 }
 
 export class Pokoj extends DurableObject<Env> {
@@ -93,6 +103,14 @@ export class Pokoj extends DurableObject<Env> {
     return this.ctx.storage.sql;
   }
 
+  /**
+   * Zakłada schemat i dociąga go do bieżącej postaci.
+   *
+   * `CREATE TABLE IF NOT EXISTS` nie dokłada kolumn do tabeli, która już
+   * istnieje — a obiekt pokoju powstaje przy pierwszym pytaniu o dany kod,
+   * więc tabele mogą pochodzić ze starszej wersji schematu i być przy tym
+   * puste. Dlatego brakujące kolumny dokładamy osobno.
+   */
   private migruj(): void {
     this.sql.exec(`
       CREATE TABLE IF NOT EXISTS pokoj (
@@ -106,9 +124,45 @@ export class Pokoj extends DurableObject<Env> {
         dolaczyl INTEGER NOT NULL,
         miejsce INTEGER,
         rola TEXT,
-        widzial INTEGER
+        widzial INTEGER,
+        ujawniony INTEGER
       );
     `);
+
+    const kolumny = new Set(
+      this.sql
+        .exec<{ name: string }>("SELECT name FROM pragma_table_info('gracze')")
+        .toArray()
+        .map((k) => k.name)
+    );
+
+    // Brak `token` znaczy, że tabela pochodzi sprzed obsługi graczy, więc jest
+    // pusta — wtedy prościej i bezpieczniej zbudować ją od nowa niż dokładać
+    // kolumnę z więzami, których ALTER nie przyjmie.
+    if (!kolumny.has("token")) {
+      this.sql.exec("DROP TABLE gracze");
+      this.sql.exec(`
+        CREATE TABLE gracze (
+          id TEXT PRIMARY KEY,
+          token TEXT NOT NULL UNIQUE,
+          nazwa TEXT NOT NULL,
+          dolaczyl INTEGER NOT NULL,
+          miejsce INTEGER,
+          rola TEXT,
+          widzial INTEGER,
+          ujawniony INTEGER
+        );
+      `);
+      return;
+    }
+
+    for (const [nazwa, typ] of [
+      ["rola", "TEXT"],
+      ["widzial", "INTEGER"],
+      ["ujawniony", "INTEGER"],
+    ] as const) {
+      if (!kolumny.has(nazwa)) this.sql.exec(`ALTER TABLE gracze ADD COLUMN ${nazwa} ${typ}`);
+    }
   }
 
   // ————————————————————— drobiazgi na stanie pokoju —————————————————————
@@ -157,6 +211,7 @@ export class Pokoj extends DurableObject<Env> {
       miejsce: g.miejsce,
       maKarte: g.rola !== null,
       widzial: g.widzial,
+      ujawniony: g.ujawniony !== null,
     }));
   }
 
@@ -282,6 +337,15 @@ export class Pokoj extends DurableObject<Env> {
     return { ok: true, dane: this.stanDlaSkrotu(skrot) };
   }
 
+  /** Skład rozgrywki, posortowany, żeby nie niósł informacji o miejscach. */
+  private sklad(): string[] {
+    if (this.etap() !== "rozdane") return [];
+    return this.gracze()
+      .map((g) => g.rola)
+      .filter((r): r is string => !!r)
+      .sort();
+  }
+
   private stanDlaSkrotu(skrot: string): StanGracza {
     const wszyscy = this.gracze();
     const ja = wszyscy.find((g) => g.token === skrot) ?? null;
@@ -299,6 +363,11 @@ export class Pokoj extends DurableObject<Env> {
           }
         : null,
       imiona: wszyscy.map((g) => g.nazwa),
+      sklad: this.sklad(),
+      ujawnieni: wszyscy
+        .filter((g) => g.ujawniony !== null && g.rola)
+        .sort((a, b) => (a.ujawniony ?? 0) - (b.ujawniony ?? 0))
+        .map((g) => ({ rola: g.rola as string, imie: g.nazwa })),
     };
   }
 
@@ -380,9 +449,35 @@ export class Pokoj extends DurableObject<Env> {
     for (const { gracz, rola } of przypisania) {
       if (!znani.has(gracz)) continue;
       if (typeof rola !== "string" || rola.length > 64) continue;
-      this.sql.exec("UPDATE gracze SET rola = ?, widzial = NULL WHERE id = ?", rola, gracz);
+      this.sql.exec(
+        "UPDATE gracze SET rola = ?, widzial = NULL, ujawniony = NULL WHERE id = ?",
+        rola,
+        gracz
+      );
     }
     this.ustaw("etap", "rozdane");
+    this.rozeslij();
+    return { ok: true, dane: this.stanPelny() };
+  }
+
+  /**
+   * Odkrywa karty zmarłych.
+   *
+   * Świadomie osobna akcja, a nie skutek śmierci: gdyby pokój dowiadywał się
+   * o niej w chwili zabicia, telefony ujawniłyby nocne ofiary, zanim Manitou
+   * zdąży ogłosić poranek. Publikujemy wtedy, kiedy karta idzie na stół.
+   */
+  async ujawnij(uzytkownik: string, gracze: string[]): Promise<Wynik<StanPokoju>> {
+    if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
+    if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
+    const teraz = Date.now();
+    for (const id of gracze) {
+      this.sql.exec(
+        "UPDATE gracze SET ujawniony = ? WHERE id = ? AND ujawniony IS NULL AND rola IS NOT NULL",
+        teraz,
+        id
+      );
+    }
     this.rozeslij();
     return { ok: true, dane: this.stanPelny() };
   }
@@ -409,7 +504,7 @@ export class Pokoj extends DurableObject<Env> {
   async nowaRunda(uzytkownik: string): Promise<Wynik<StanPokoju>> {
     if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
     if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
-    this.sql.exec("UPDATE gracze SET rola = NULL, widzial = NULL");
+    this.sql.exec("UPDATE gracze SET rola = NULL, widzial = NULL, ujawniony = NULL");
     this.ustaw("etap", "zamkniete");
     // Doba liczy się od nowa — nowa rozgrywka to nowy wieczór.
     const wygasa = Date.now() + WAZNOSC_POKOJU_MS;

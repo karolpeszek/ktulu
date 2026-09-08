@@ -7,11 +7,17 @@
  * Prowadzący wchodzi na swój pulpit przyciskiem w prawym górnym rogu.
  */
 
-import { useState, useSyncExternalStore } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Button, Card } from "@/components/ui";
 import PolaKodu from "@/components/PolaKodu";
 import Poczekalnia from "@/components/Poczekalnia";
+import {
+  NIEZNANY,
+  subskrybujPokoj,
+  zapamietajPokoj,
+  zapamietanyPokoj,
+} from "@/lib/tozsamosc";
 import { DLUGOSC_KODU_POKOJU, rdzenKodu, sprawdzKodPokoju } from "@/lib/kody";
 
 /**
@@ -115,9 +121,16 @@ function Formularz({ onWejscie }: { onWejscie: (kod: string) => void }) {
 }
 
 export default function EkranGracza() {
-  // Kod trzymamy w stanie strony, żeby „wpisz inny kod” wracało do formularza
-  // bez przeładowania i bez gubienia tożsamości zapisanej dla pokoju.
-  const [wPokoju, setWPokoju] = useState<string | null>(null);
+  /**
+   * Pokój czytany z pamięci przeglądarki, nie ze stanu strony.
+   *
+   * Odświeżenie w środku rozgrywki ma wracać do karty, a nie do wpisywania
+   * kodu. Wartość dla renderu na serwerze jest osobna, żeby zamiast złego
+   * ekranu pokazać na moment pusty — formularz nie mignie przed poczekalnią.
+   */
+  const wPokoju = useSyncExternalStore(subskrybujPokoj, zapamietanyPokoj, () => NIEZNANY);
+  const wejdz = useCallback((kod: string) => zapamietajPokoj(kod), []);
+  const wyjdz = useCallback(() => zapamietajPokoj(null), []);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -137,8 +150,8 @@ export default function EkranGracza() {
       </header>
 
       <div className="flex-1 grid place-items-center p-4">
-        {wPokoju ? (
-          <Poczekalnia kod={wPokoju} wyjdz={() => setWPokoju(null)} />
+        {wPokoju === NIEZNANY ? null : wPokoju ? (
+          <Poczekalnia kod={wPokoju} wyjdz={wyjdz} />
         ) : (
         <div className="w-full max-w-[380px] flex flex-col gap-4">
           <div className="text-center">
@@ -147,7 +160,7 @@ export default function EkranGracza() {
               Wpisz kod, który podał prowadzący.
             </div>
           </div>
-          <Formularz onWejscie={setWPokoju} />
+          <Formularz onWejscie={wejdz} />
         </div>
         )}
       </div>

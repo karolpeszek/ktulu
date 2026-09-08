@@ -20,6 +20,8 @@ export interface GraczWPokoju {
   maKarte: boolean;
   /** Kiedy potwierdził, że ją obejrzał. */
   widzial: number | null;
+  /** Czy jego karta została odkryta po śmierci. */
+  ujawniony: boolean;
 }
 
 export interface StanPokoju {
@@ -92,6 +94,32 @@ export async function nowaRundaWZapamietanym(): Promise<void> {
   await api(`/api/pokoj/${kod}/nowa-runda`, { method: "POST", body: "{}" });
 }
 
+/**
+ * Ujawnia karty zmarłych w zapamiętanym pokoju, bez otwierania WebSocketa.
+ *
+ * Wołane z ekranu rozgrywki, gdzie podgląd na żywo nie jest potrzebny —
+ * prowadzący patrzy tam na własny stan gry, nie na pokój.
+ */
+export async function ujawnijWZapamietanym(gracze: string[]): Promise<void> {
+  const kod = zapamietanyKod();
+  if (!kod || gracze.length === 0) return;
+  await api(`/api/pokoj/${kod}/ujawnij`, {
+    method: "POST",
+    body: JSON.stringify({ gracze }),
+  });
+}
+
+/** Stan pokoju na żądanie, bez podglądu na żywo. Null, gdy gra idzie bez lobby. */
+export async function stanZZapamietanego(): Promise<StanPokoju | null> {
+  const kod = zapamietanyKod();
+  if (!kod) return null;
+  try {
+    return await api<StanPokoju>(`/api/pokoj/${kod}/manitou`);
+  } catch {
+    return null;
+  }
+}
+
 export interface Pokoj {
   stan: StanPokoju | null;
   polaczenie: StanPolaczeniaPokoju;
@@ -105,6 +133,7 @@ export interface Pokoj {
   ustawEtap: (etap: EtapPokoju) => Promise<void>;
   rozdaj: (przypisania: { gracz: string; rola: string }[]) => Promise<void>;
   nowaRunda: () => Promise<void>;
+  ujawnij: (gracze: string[]) => Promise<void>;
 }
 
 export function usePokoj(aktywny: boolean): Pokoj {
@@ -239,5 +268,6 @@ export function usePokoj(aktywny: boolean): Pokoj {
     ustawEtap: (etap) => dzialaj("/etap", { etap }),
     rozdaj: (przypisania) => dzialaj("/rozdaj", { przypisania }),
     nowaRunda: () => dzialaj("/nowa-runda", {}),
+    ujawnij: (gracze) => dzialaj("/ujawnij", { gracze }),
   };
 }

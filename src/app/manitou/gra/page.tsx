@@ -16,6 +16,7 @@ import Roster from "@/components/Roster";
 import EventLog from "@/components/EventLog";
 import SeatArc, { SeatLegend } from "@/components/SeatArc";
 import { BondsPanel, ManualPanel, StatusPanel } from "@/components/SidePanels";
+import PanelUjawnien from "@/components/PanelUjawnien";
 
 export default function GamePage() {
   const { state, reset, loaded } = useGame();
@@ -71,6 +72,7 @@ export default function GamePage() {
         >
           <Roster state={state} hideRoles={safeMode} />
         </Card>
+        <PanelUjawnien />
         <BondsPanel />
         <Card title="Dziennik">
           <EventLog state={state} />
