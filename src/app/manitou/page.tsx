@@ -33,7 +33,10 @@ import {
   inputCls,
 } from "@/components/ui";
 import FactionDonut from "@/components/FactionDonut";
+import KartaLobby from "@/components/KartaLobby";
 import SeatArc, { SeatLegend } from "@/components/SeatArc";
+import { useKonto } from "@/lib/konto";
+import { GraczWPokoju, usePokoj } from "@/lib/pokoj";
 
 let idSeq = 0;
 const newId = () => `p${Date.now().toString(36)}${idSeq++}`;
@@ -90,6 +93,9 @@ export default function SetupPage() {
 
   const players = state.players;
   const withJanosik = state.setup.withJanosik;
+  const { trybOnline } = useKonto();
+  const pokoj = usePokoj(trybOnline);
+
   const janosikOk = janosikAllowed(players.length);
   const counts = state.setup.manualCounts
     ? state.setup.counts
@@ -112,6 +118,24 @@ export default function SetupPage() {
       out[f] = buildPool(f, counts[f], state.setup.picked[f] ?? [], state.setup.autofill);
     return out;
   }, [counts, state.setup.picked, state.setup.autofill]);
+
+  /**
+   * Sadza gracza z poczekalni przy stole.
+   *
+   * Identyfikator z pokoju staje się identyfikatorem gracza w grze — dzięki
+   * temu ponowne kliknięcie nie dokłada tej samej osoby drugi raz, a karta
+   * rozdana później trafi do właściwego telefonu.
+   */
+  const posadzZPuli = (g: GraczWPokoju) => {
+    let miejsce = -1;
+    update((s) => {
+      if (s.players.some((x) => x.id === g.id)) return;
+      miejsce = s.players.length;
+      s.players.push({ id: g.id, name: g.nazwa, seat: miejsce, roleId: null, alive: true });
+      syncRecommended(s);
+    });
+    if (miejsce >= 0) void pokoj.usadz(g.id, miejsce);
+  };
 
   const addPlayer = (n: string) => {
     const trimmed = n.trim();
@@ -233,6 +257,14 @@ export default function SetupPage() {
       <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-4 items-start">
         {/* ── kolumna lewa ── */}
         <div className="flex flex-col gap-4">
+          {trybOnline && (
+            <KartaLobby
+              pokoj={pokoj}
+              posadzeni={players.map((p) => p.id)}
+              onPosadz={posadzZPuli}
+            />
+          )}
+
           <Card
             title="Gracze"
             right={

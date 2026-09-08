@@ -11,6 +11,7 @@ import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Button, Card } from "@/components/ui";
 import PolaKodu from "@/components/PolaKodu";
+import Poczekalnia from "@/components/Poczekalnia";
 import { DLUGOSC_KODU_POKOJU, rdzenKodu, sprawdzKodPokoju } from "@/lib/kody";
 
 /**
@@ -33,7 +34,7 @@ function useKodZAdresu(): string {
   );
 }
 
-function Formularz() {
+function Formularz({ onWejscie }: { onWejscie: (kod: string) => void }) {
   const zAdresu = useKodZAdresu();
   const [wpisane, setWpisane] = useState<string | null>(null);
   const [blad, setBlad] = useState<string | null>(null);
@@ -61,8 +62,7 @@ function Formularz() {
         setBlad("Nie ma pokoju o tym kodzie. Sprawdź, czy przepisany jest dokładnie.");
         return;
       }
-      // Dołączanie powstaje w kolejnym kroku — na razie kod jest tylko sprawdzany.
-      setBlad("Pokój istnieje, ale dołączanie nie jest jeszcze uruchomione.");
+      onWejscie(wynik.kod);
     } catch (e) {
       setBlad(
         (e as Error).message === "Failed to fetch"
@@ -115,6 +115,10 @@ function Formularz() {
 }
 
 export default function EkranGracza() {
+  // Kod trzymamy w stanie strony, żeby „wpisz inny kod” wracało do formularza
+  // bez przeładowania i bez gubienia tożsamości zapisanej dla pokoju.
+  const [wPokoju, setWPokoju] = useState<string | null>(null);
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="h-12 shrink-0 flex items-center px-4">
@@ -133,6 +137,9 @@ export default function EkranGracza() {
       </header>
 
       <div className="flex-1 grid place-items-center p-4">
+        {wPokoju ? (
+          <Poczekalnia kod={wPokoju} wyjdz={() => setWPokoju(null)} />
+        ) : (
         <div className="w-full max-w-[380px] flex flex-col gap-4">
           <div className="text-center">
             <div className="text-[15px] font-semibold">Dołącz do rozgrywki</div>
@@ -140,8 +147,9 @@ export default function EkranGracza() {
               Wpisz kod, który podał prowadzący.
             </div>
           </div>
-          <Formularz />
+          <Formularz onWejscie={setWPokoju} />
         </div>
+        )}
       </div>
     </div>
   );

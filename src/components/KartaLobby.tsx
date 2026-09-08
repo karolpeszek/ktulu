@@ -1,0 +1,216 @@
+"use client";
+
+/**
+ * Lobby w przygotowaniu gry.
+ *
+ * Pokój żyje na serwerze tylko po to, żeby zebrać imiona i rozdać karty.
+ * Sadzanie kogoś z puli dopisuje go do zwykłej listy graczy — dalej wszystko
+ * działa tak samo jak przy grze bez sieci, łącznie ze zmianą kolejności.
+ */
+
+import { useState } from "react";
+import type { Pokoj, GraczWPokoju } from "@/lib/pokoj";
+import { Badge, Button, Card, Empty, cx, inputCls } from "./ui";
+import EkranKodu from "./EkranKodu";
+
+function Kropka({ kolor, tytul }: { kolor: string; tytul: string }) {
+  return (
+    <span
+      title={tytul}
+      className="w-2 h-2 rounded-full shrink-0"
+      style={{ background: kolor }}
+      aria-label={tytul}
+    />
+  );
+}
+
+export default function KartaLobby({
+  pokoj,
+  posadzeni,
+  onPosadz,
+}: {
+  pokoj: Pokoj;
+  /** Identyfikatory graczy, którzy siedzą już na liście prowadzącego. */
+  posadzeni: string[];
+  onPosadz: (gracz: GraczWPokoju) => void;
+}) {
+  const [pelnyEkran, setPelnyEkran] = useState(false);
+  const [zmieniany, setZmieniany] = useState<string | null>(null);
+  const [nowaNazwa, setNowaNazwa] = useState("");
+
+  const stan = pokoj.stan;
+
+  if (!stan) {
+    return (
+      <Card title="Lobby">
+        <p className="text-[12.5px] text-[var(--text-dim)] leading-relaxed">
+          Utwórz pokój, a gracze dołączą kodem ze swoich telefonów. Imiona wpiszą sami, ty tylko
+          sadzasz ich w kolejności przy stole.
+        </p>
+        {pokoj.blad && (
+          <p className="text-[12.5px] mt-2" style={{ color: "var(--danger)" }}>
+            {pokoj.blad}
+          </p>
+        )}
+        <Button variant="primary" className="mt-3" onClick={() => void pokoj.zaloz()}>
+          Utwórz pokój
+        </Button>
+      </Card>
+    );
+  }
+
+  const pula = stan.gracze.filter((g) => !posadzeni.includes(g.id));
+  const zapisyOtwarte = stan.etap === "lobby";
+
+  return (
+    <>
+      <Card
+        title="Lobby"
+        right={
+          <div className="flex items-center gap-2">
+            <Kropka
+              kolor={
+                pokoj.polaczenie === "polaczony"
+                  ? "var(--ok)"
+                  : pokoj.polaczenie === "laczenie"
+                    ? "var(--warn)"
+                    : "var(--danger)"
+              }
+              tytul={
+                pokoj.polaczenie === "polaczony"
+                  ? "Podgląd na żywo działa"
+                  : pokoj.polaczenie === "laczenie"
+                    ? "Łączenie z pokojem"
+                    : "Brak połączenia z pokojem"
+              }
+            />
+            <Badge color={zapisyOtwarte ? "var(--ok)" : "var(--text-dim)"}>
+              {zapisyOtwarte ? "zapisy otwarte" : "zapisy zamknięte"}
+            </Badge>
+          </div>
+        }
+      >
+        <div className="flex items-center gap-3">
+          <div>
+            <div className="label-xs mb-1">Kod pokoju</div>
+            <div className="font-mono font-bold tracking-[0.2em] text-[26px] leading-none">
+              {stan.kod}
+            </div>
+          </div>
+          <Button variant="primary" className="ml-auto" onClick={() => setPelnyEkran(true)}>
+            Pokaż graczom
+          </Button>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            onClick={() => void pokoj.ustawEtap(zapisyOtwarte ? "zamkniete" : "lobby")}
+          >
+            {zapisyOtwarte ? "Zamknij zapisy" : "Otwórz zapisy"}
+          </Button>
+          {pula.length > 0 && (
+            <Button size="sm" onClick={() => pula.forEach(onPosadz)}>
+              Posadź wszystkich ({pula.length})
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto"
+            onClick={() => {
+              if (!confirm("Zamknąć pokój? Gracze stracą do niego dostęp.")) return;
+              void pokoj.zamknijNaZawsze();
+            }}
+          >
+            Zamknij pokój
+          </Button>
+        </div>
+
+        {pokoj.blad && (
+          <p className="text-[12.5px] mt-2" style={{ color: "var(--danger)" }}>
+            {pokoj.blad}
+          </p>
+        )}
+
+        <div className="mt-4">
+          <div className="label-xs mb-1.5">
+            Poczekalnia {pula.length > 0 && <span className="text-[var(--accent)]">({pula.length})</span>}
+          </div>
+          {pula.length === 0 ? (
+            <Empty>
+              {stan.gracze.length === 0
+                ? "Nikt jeszcze nie dołączył."
+                : "Wszyscy dołączeni siedzą już przy stole."}
+            </Empty>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {pula.map((g) => (
+                <div key={g.id} className="ui-row flex items-center gap-2">
+                  {zmieniany === g.id ? (
+                    <form
+                      className="flex items-center gap-2 flex-1 min-w-0"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void pokoj.przemianuj(g.id, nowaNazwa);
+                        setZmieniany(null);
+                      }}
+                    >
+                      <input
+                        className={cx(inputCls, "flex-1 min-w-0")}
+                        value={nowaNazwa}
+                        onChange={(e) => setNowaNazwa(e.target.value)}
+                        maxLength={16}
+                        autoFocus
+                      />
+                      <Button size="sm" type="submit">
+                        Zapisz
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setZmieniany(null)}>
+                        Anuluj
+                      </Button>
+                    </form>
+                  ) : (
+                    <>
+                      <span className="text-[13px] font-medium truncate">{g.nazwa}</span>
+                      <span className="text-[11.5px] text-[var(--text-faint)] shrink-0">
+                        {new Date(g.dolaczyl).toLocaleTimeString("pl-PL", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                        <Button size="sm" variant="primary" onClick={() => onPosadz(g)}>
+                          Posadź
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setZmieniany(g.id);
+                            setNowaNazwa(g.nazwa);
+                          }}
+                        >
+                          Zmień imię
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => void pokoj.wyrzuc(g.id)}>
+                          Usuń
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-2 text-[12px] text-[var(--text-faint)] leading-relaxed">
+            Sadzanie dopisuje gracza na koniec listy przy stole. Kolejność zmienisz potem
+            przeciąganiem — na liście albo wprost w kręgu rady.
+          </p>
+        </div>
+      </Card>
+
+      {pelnyEkran && <EkranKodu kod={stan.kod} zamknij={() => setPelnyEkran(false)} />}
+    </>
+  );
+}
