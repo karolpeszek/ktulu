@@ -50,31 +50,38 @@ export default function EkranKodu({ kod, zamknij }: { kod: string; zamknij: () =
         <Button onClick={zamknij}>Zamknij</Button>
       </div>
 
-      <div className="flex-1 grid place-items-center p-6 overflow-auto">
-        <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16">
-          <div className="shrink-0 p-4 bg-white rounded-[12px] shadow-sm">
+      {/* Ten ekran pokazuje się stołowi z odległości ręki wyciągniętej przez
+          pół pokoju, więc kod i QR mają zająć tyle miejsca, ile się da. */}
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 px-4 pb-4">
+        <div className="flex-1 min-h-0 w-full flex items-center justify-center">
+          {/* Bok liczony z obu wymiarów naraz: w poziomie ogranicza go połowa
+              szerokości, w pionie wysokość okna. Bez tego kwadrat wychodziłby
+              poza ekran na niskim, szerokim oknie. */}
+          <div className="bg-white rounded-[10px] p-[1.5%] aspect-square w-[min(92vw,42vh)] md:w-[min(46vw,80vh)]">
             {adres ? (
-              <KodQR tresc={adres} rozmiar={260} opis={`Kod pokoju ${kod}`} />
+              <KodQR tresc={adres} opis={`Kod pokoju ${kod}`} />
             ) : (
-              <div className="w-[260px] h-[260px]" />
+              <div className="w-full h-full" />
             )}
           </div>
+        </div>
 
-          <div className="text-center md:text-left">
-            <div className="label-xs mb-2">Kod pokoju</div>
-            <div className="font-mono font-bold tracking-[0.18em] text-[clamp(56px,12vw,110px)] leading-none">
-              {kod}
-            </div>
-            <p className="mt-6 text-[14px] text-[var(--text-dim)] leading-relaxed max-w-[340px]">
-              Zeskanuj kod albo wejdź na{" "}
-              <strong className="text-[var(--text)]">{adres.replace(/^https?:\/\//, "").split("/?")[0]}</strong>{" "}
-              i wpisz cztery znaki.
-            </p>
-            <p className="mt-3 text-[12.5px] text-[var(--text-faint)] leading-relaxed max-w-[340px]">
-              W kodach nie ma zera, litery O, jedynki, I ani L — jeśli ktoś je widzi, to na pewno
-              inny znak.
-            </p>
+        <div className="flex-1 min-w-0 w-full flex flex-col items-center justify-center text-center">
+          <div className="label-xs">Kod pokoju</div>
+          {/* Cztery znaki plus odstępy to około 2,9 szerokości litery, więc
+              górna granica w vw pilnuje, żeby kod mieścił się w swojej połowie. */}
+          <div className="font-mono font-bold tracking-[0.12em] leading-none w-full text-[min(26vw,14vh)] md:text-[min(15vw,30vh)]">
+            {kod}
           </div>
+          <p className="mt-[3vh] text-[clamp(13px,2.2vh,20px)] text-[var(--text-dim)] leading-snug">
+            Zeskanuj albo wejdź na{" "}
+            <strong className="text-[var(--text)]">
+              {adres.replace(/^https?:\/\//, "").split("/?")[0]}
+            </strong>
+          </p>
+          <p className="mt-[1vh] text-[clamp(11px,1.7vh,15px)] text-[var(--text-faint)] leading-snug">
+            W kodach nie ma zera, litery O, jedynki, I ani L.
+          </p>
         </div>
       </div>
     </div>
