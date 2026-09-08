@@ -113,6 +113,12 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  // API omija service workera w całości. Odpowiedzi zależą od sesji i chwili,
+  // a networkFirst zapisałby je do cache'u aplikacji i po utracie sieci
+  // podawał nieświeże. Brak respondWith = zwykłe żądanie sieciowe.
+  // Dotyczy też WebSocketów, które jadą po tym samym prefiksie.
+  if (url.pathname.startsWith("/api/")) return;
+
   // Nawigacje: najpierw cache (natychmiastowy start offline), z podmianą na
   // stronę główną, gdy trasa nie jest znana.
   if (request.mode === "navigate") {
