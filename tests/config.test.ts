@@ -5,7 +5,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { bladRpId, originDozwolony, sprawdzKonfiguracje } from "../worker/config";
+import { bladRpId, originDozwolony, sprawdzKonfiguracje, tenSamOrigin } from "../worker/config";
 
 describe("Walidacja RP_ID", () => {
   it("przyjmuje zwykłą domenę i subdomenę", () => {
@@ -78,7 +78,42 @@ describe("Sprawdzenie konfiguracji", () => {
   });
 });
 
-describe("Dozwolone originy", () => {
+describe("Ochrona przed obcą stroną", () => {
+  it("żądanie spod tego samego adresu przechodzi", () => {
+    assert.equal(tenSamOrigin("https://a.example.com", "https://a.example.com/api/x"), true);
+    // Port i schemat też muszą się zgadzać.
+    assert.equal(tenSamOrigin("http://localhost:8788", "http://localhost:8788/api/x"), true);
+  });
+
+  it("żądanie z obcej strony odpada", () => {
+    assert.equal(tenSamOrigin("https://zle.pl", "https://a.example.com/api/x"), false);
+    assert.equal(tenSamOrigin("http://a.example.com", "https://a.example.com/api/x"), false);
+    assert.equal(tenSamOrigin("https://a.example.com:8443", "https://a.example.com/api/x"), false);
+  });
+
+  it("brak nagłówka nie jest odmową", () => {
+    // Przeglądarki nie wysyłają Origin przy zwykłej nawigacji.
+    assert.equal(tenSamOrigin(null, "https://a.example.com/api/x"), true);
+  });
+
+  it("śmieci w nagłówku są odrzucane", () => {
+    assert.equal(tenSamOrigin("nie-adres", "https://a.example.com/api/x"), false);
+  });
+
+  it("adres podglądu nie jest już blokowany przez RP_ID", () => {
+    // To był błąd: sprawdzenie adresu odcinało własną aplikację od każdego
+    // adresu innego niż domena passkeyów.
+    assert.equal(
+      tenSamOrigin(
+        "https://feat-lobby-ktulu.sub.workers.dev",
+        "https://feat-lobby-ktulu.sub.workers.dev/api/pokoj/AB3D"
+      ),
+      true
+    );
+  });
+});
+
+describe("Adresy, pod którymi działa logowanie", () => {
   it("domena i jej subdomeny przechodzą po https", () => {
     assert.equal(originDozwolony("https://example.com", "example.com"), true);
     assert.equal(originDozwolony("https://ktulu.example.com", "example.com"), true);

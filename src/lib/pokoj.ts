@@ -16,6 +16,10 @@ export interface GraczWPokoju {
   nazwa: string;
   dolaczyl: number;
   miejsce: number | null;
+  /** Czy ma już wydaną kartę. Samej karty prowadzący stąd nie dostaje. */
+  maKarte: boolean;
+  /** Kiedy potwierdził, że ją obejrzał. */
+  widzial: number | null;
 }
 
 export interface StanPokoju {
@@ -75,6 +79,19 @@ async function api<T>(sciezka: string, opcje: RequestInit = {}): Promise<T> {
   return dane as T;
 }
 
+/**
+ * Nowa runda w zapamiętanym pokoju, bez otwierania WebSocketa.
+ *
+ * Wołane z ekranu końca gry, gdzie podgląd na żywo nie jest do niczego
+ * potrzebny — byłoby marnotrawstwem trzymać dla tego jednego żądania
+ * osobne połączenie.
+ */
+export async function nowaRundaWZapamietanym(): Promise<void> {
+  const kod = zapamietanyKod();
+  if (!kod) return;
+  await api(`/api/pokoj/${kod}/nowa-runda`, { method: "POST", body: "{}" });
+}
+
 export interface Pokoj {
   stan: StanPokoju | null;
   polaczenie: StanPolaczeniaPokoju;
@@ -86,6 +103,8 @@ export interface Pokoj {
   przemianuj: (gracz: string, nazwa: string) => Promise<void>;
   wyrzuc: (gracz: string) => Promise<void>;
   ustawEtap: (etap: EtapPokoju) => Promise<void>;
+  rozdaj: (przypisania: { gracz: string; rola: string }[]) => Promise<void>;
+  nowaRunda: () => Promise<void>;
 }
 
 export function usePokoj(aktywny: boolean): Pokoj {
@@ -218,5 +237,7 @@ export function usePokoj(aktywny: boolean): Pokoj {
     przemianuj: (gracz, nazwa) => dzialaj("/przemianuj", { gracz, nazwa }),
     wyrzuc: (gracz) => dzialaj("/wyrzuc", { gracz }),
     ustawEtap: (etap) => dzialaj("/etap", { etap }),
+    rozdaj: (przypisania) => dzialaj("/rozdaj", { przypisania }),
+    nowaRunda: () => dzialaj("/nowa-runda", {}),
   };
 }

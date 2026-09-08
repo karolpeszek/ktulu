@@ -107,11 +107,11 @@ export function sprawdzKonfiguracje(env: SurowaKonfiguracja): WynikKonfiguracji 
 }
 
 /**
- * Czy dany origin wolno obsłużyć przy tej konfiguracji.
+ * Czy pod tym adresem zadziała logowanie kluczem.
  *
- * Zamiast listy adresów w konfiguracji wyprowadzamy ją z RP_ID: dozwolone jest
- * każde https pod tą domeną. Dzięki temu adresy podglądu gałęzi działają same,
- * bez dopisywania ich przy każdej nowej gałęzi.
+ * Passkey jest związany z RP_ID, więc przeglądarka pokaże go wyłącznie na tej
+ * domenie i jej subdomenach. Dotyczy to tylko uwierzytelniania — reszta API
+ * działa pod każdym adresem, pod którym aplikacja jest wystawiona.
  */
 export function originDozwolony(origin: string, rpId: string): boolean {
   let host: string;
@@ -126,4 +126,24 @@ export function originDozwolony(origin: string, rpId: string): boolean {
   if (rpId === "localhost") return host === "localhost";
   if (protokol !== "https:") return false;
   return host === rpId || host.endsWith("." + rpId);
+}
+
+/**
+ * Czy żądanie przyszło z tej samej strony.
+ *
+ * To jest właściwa ochrona przed żądaniami montowanymi przez obcą witrynę:
+ * porównujemy nagłówek Origin z adresem, pod którym aplikacja właśnie działa.
+ * Wiązanie tego z RP_ID było błędem — odcinało własną aplikację od każdego
+ * adresu innego niż domena passkeyów, w tym od podglądów gałęzi.
+ *
+ * Brak nagłówka nie jest odmową: przeglądarki nie wysyłają go przy zwykłej
+ * nawigacji, a żądania bez Origin i tak nie niosą ciasteczek między stronami.
+ */
+export function tenSamOrigin(origin: string | null, adres: string): boolean {
+  if (!origin) return true;
+  try {
+    return new URL(origin).origin === new URL(adres).origin;
+  } catch {
+    return false;
+  }
 }

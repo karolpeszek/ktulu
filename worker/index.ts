@@ -8,7 +8,7 @@
  */
 
 import { HASH_BOOTSTRAPU } from "./bootstrap.generated";
-import { Konfiguracja, originDozwolony, sprawdzKonfiguracje } from "./config";
+import { Konfiguracja, originDozwolony, sprawdzKonfiguracje, tenSamOrigin } from "./config";
 import { KontekstWebAuthn, Wynik } from "./konta";
 import { losujKodPokoju, sprawdzKodPokoju } from "../src/lib/kody";
 import type { EtapPokoju } from "../src/lib/lobby";
@@ -88,16 +88,31 @@ async function obsluzApi(
   url: URL,
   konfiguracja: Konfiguracja
 ): Promise<Response> {
-  const origin = request.headers.get("origin") ?? url.origin;
-  if (!originDozwolony(origin, konfiguracja.rpId)) {
-    return json({ error: "Żądanie z niedozwolonego adresu." }, 403);
+  // Ochrona przed żądaniami montowanymi przez obcą witrynę.
+  if (!tenSamOrigin(request.headers.get("origin"), url.href)) {
+    return json({ error: "Żądanie z obcej strony." }, 403);
   }
-  const https = new URL(origin).protocol === "https:";
+  const origin = url.origin;
+  const https = url.protocol === "https:";
   const kontekst: KontekstWebAuthn = {
     rpId: konfiguracja.rpId,
     rpName: konfiguracja.rpName,
     origin,
   };
+
+  /**
+   * Passkey pokaże się wyłącznie na domenie z RP_ID, więc pod innym adresem
+   * logowanie nie ma jak zadziałać. Lepiej powiedzieć to wprost, niż pozwolić
+   * przeglądarce rzucić surowym błędem WebAuthn.
+   */
+  const logowanieMozliwe = originDozwolony(origin, konfiguracja.rpId);
+  const odmowaLogowania = () =>
+    json(
+      {
+        error: `Logowanie kluczem działa tylko pod adresem ${konfiguracja.rpId}. Ten adres (${url.host}) służy do podglądu — reszta aplikacji działa tu normalnie.`,
+      },
+      409
+    );
 
   // Jeden obiekt na całą instalację — nazwa jest stała i celowo nieciekawa.
   const konta = env.KONTA.getByName("konta");
@@ -113,6 +128,7 @@ async function obsluzApi(
   }
 
   if (sciezka === "/api/auth/rejestracja/start" && post) {
+    if (!logowanieMozliwe) return odmowaLogowania();
     const dane = await czytajJson(request);
     return odpowiedz(
       await konta.rejestracjaStart(tekst(dane, "kod"), tekst(dane, "nazwa"), HASH_BOOTSTRAPU, kontekst)
@@ -120,6 +136,7 @@ async function obsluzApi(
   }
 
   if (sciezka === "/api/auth/rejestracja/koniec" && post) {
+    if (!logowanieMozliwe) return odmowaLogowania();
     const dane = await czytajJson(request);
     const w = await konta.rejestracjaKoniec(
       dane?.odpowiedz as never,
@@ -134,10 +151,12 @@ async function obsluzApi(
   }
 
   if (sciezka === "/api/auth/logowanie/start" && post) {
+    if (!logowanieMozliwe) return odmowaLogowania();
     return odpowiedz(await konta.logowanieStart(kontekst));
   }
 
   if (sciezka === "/api/auth/logowanie/koniec" && post) {
+    if (!logowanieMozliwe) return odmowaLogowania();
     const dane = await czytajJson(request);
     const w = await konta.logowanieKoniec(dane?.odpowiedz as never, kontekst);
     return w.ok
@@ -153,10 +172,12 @@ async function obsluzApi(
   }
 
   if (sciezka === "/api/auth/klucz/start" && post) {
+    if (!logowanieMozliwe) return odmowaLogowania();
     return odpowiedz(await konta.dodanieKluczaStart(sesja, kontekst));
   }
 
   if (sciezka === "/api/auth/klucz/koniec" && post) {
+    if (!logowanieMozliwe) return odmowaLogowania();
     const dane = await czytajJson(request);
     return odpowiedz(await konta.dodanieKluczaKoniec(sesja, dane?.odpowiedz as never, kontekst));
   }
@@ -224,6 +245,13 @@ async function obsluzApi(
       return odpowiedz(await pokoj.stanDlaGracza(token));
     }
 
+    if (koncowka === "/widzialem" && post) {
+      const dane = await czytajJson(request);
+      const token = tokenGracza(dane);
+      if (!token) return json({ error: "Brak tożsamości gracza." }, 400);
+      return odpowiedz(await pokoj.potwierdz(token));
+    }
+
     // Wszystko poniżej należy do prowadzącego.
     const ja = await konta.ktoTo(sesja, konfiguracja.rpId);
     if (!ja) return json({ error: "Trzeba być zalogowanym." }, 401);
@@ -258,6 +286,20 @@ async function obsluzApi(
     if (koncowka === "/wyrzuc" && post) {
       const dane = await czytajJson(request);
       return odpowiedz(await pokoj.wyrzuc(ja.id, tekst(dane, "gracz")));
+    }
+
+    if (koncowka === "/rozdaj" && post) {
+      const dane = await czytajJson(request);
+      const surowe = Array.isArray(dane?.przypisania) ? dane.przypisania : [];
+      const przypisania = surowe
+        .map((x) => x as { gracz?: unknown; rola?: unknown })
+        .filter((x) => typeof x.gracz === "string" && typeof x.rola === "string")
+        .map((x) => ({ gracz: x.gracz as string, rola: x.rola as string }));
+      return odpowiedz(await pokoj.rozdaj(ja.id, przypisania));
+    }
+
+    if (koncowka === "/nowa-runda" && post) {
+      return odpowiedz(await pokoj.nowaRunda(ja.id));
     }
 
     if (koncowka === "/etap" && post) {

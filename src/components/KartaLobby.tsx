@@ -61,6 +61,9 @@ export default function KartaLobby({
 
   const pula = stan.gracze.filter((g) => !posadzeni.includes(g.id));
   const zapisyOtwarte = stan.etap === "lobby";
+  const zKarta = stan.gracze.filter((g) => g.maKarte);
+  const widzieli = zKarta.filter((g) => g.widzial !== null);
+  const rozdane = stan.etap === "rozdane";
 
   return (
     <>
@@ -131,6 +134,38 @@ export default function KartaLobby({
           <p className="text-[12.5px] mt-2" style={{ color: "var(--danger)" }}>
             {pokoj.blad}
           </p>
+        )}
+
+        {rozdane && (
+          <div className="mt-4 pt-3 border-t border-[var(--border)]">
+            <div className="flex items-center justify-between">
+              <div className="label-xs">Kto obejrzał kartę</div>
+              <Badge color={widzieli.length === zKarta.length ? "var(--ok)" : "var(--warn)"}>
+                {widzieli.length}/{zKarta.length}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {zKarta.map((g) => (
+                <span
+                  key={g.id}
+                  className="text-[12.5px] px-2 py-1 rounded-[6px]"
+                  style={{
+                    background: "var(--surface-2)",
+                    color: g.widzial === null ? "var(--text-faint)" : "var(--text)",
+                  }}
+                  title={g.widzial === null ? "Jeszcze nie zobaczył" : "Potwierdził"}
+                >
+                  {g.widzial !== null && "✓ "}
+                  {g.nazwa}
+                </span>
+              ))}
+            </div>
+            <p className="mt-2 text-[12px] text-[var(--text-faint)] leading-relaxed">
+              {widzieli.length === zKarta.length
+                ? "Wszyscy znają swoje karty — można zaczynać noc zerową."
+                : "Poczekaj, aż wszyscy potwierdzą, albo zapytaj brakujące osoby na głos."}
+            </p>
+          </div>
         )}
 
         <div className="mt-4">

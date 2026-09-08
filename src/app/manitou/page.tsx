@@ -20,6 +20,7 @@ import {
   totalOf,
 } from "@/lib/setup";
 import { firstIndex } from "@/lib/resolve";
+import { zachowajSklad } from "@/lib/nowaGra";
 import {
   Badge,
   Button,
@@ -207,6 +208,31 @@ export default function SetupPage() {
       s.players.forEach((p) => (p.roleId = null));
     });
 
+  /** Czy gracze przy stole pochodzą z tego pokoju — tylko wtedy jest komu wydać karty. */
+  const wPokoju = !!pokoj.stan && players.some((p) => pokoj.stan!.gracze.some((g) => g.id === p.id));
+
+  /**
+   * Wysyła rozdanie do pokoju. Losowanie zostało po tej stronie, bo prowadzący
+   * i tak zna wszystkie karty — serwer pilnuje tylko, żeby każdy telefon
+   * dostał wyłącznie swoją.
+   */
+  const wydajKarty = async () => {
+    const przypisania = players
+      .filter((p) => p.roleId)
+      .map((p) => ({ gracz: p.id, rola: p.roleId! }));
+    await pokoj.rozdaj(przypisania);
+  };
+
+  /**
+   * Nowa rozgrywka bez rozstawiania stołu od nowa: ci sami ludzie, ten sam kod,
+   * czysty stan gry. Telefony same wrócą do poczekalni.
+   */
+  const nowaGraTymSkladem = async () => {
+    if (pokoj.stan) await pokoj.nowaRunda();
+    update(zachowajSklad);
+    router.push("/manitou");
+  };
+
   const startGame = () => {
     update((s) => {
       s.stage = "night";
@@ -224,7 +250,7 @@ export default function SetupPage() {
       s.setup.counts = counts;
       s.setup.manualCounts = true;
     });
-    router.push("/gra");
+    router.push("/manitou/gra");
   };
 
   const ready = players.length >= 4 && assigned === players.length && countsTotal === players.length;
@@ -239,17 +265,20 @@ export default function SetupPage() {
             Rozgrywka jest w toku ({state.stage === "night" ? `noc ${state.night}` : `dzień ${state.day}`}
             ). Zmiany w przygotowaniu nie wpłyną na trwającą grę.
           </span>
-          <Button variant="primary" size="sm" onClick={() => router.push("/gra")}>
+          <Button variant="primary" size="sm" onClick={() => router.push("/manitou/gra")}>
             Wróć do rozgrywki
+          </Button>
+          <Button size="sm" onClick={() => void nowaGraTymSkladem()}>
+            Jeszcze raz tym składem
           </Button>
           <Button
             size="sm"
             variant="danger"
             onClick={() => {
-              if (confirm("Skasować bieżącą rozgrywkę i zacząć od zera?")) reset();
+              if (confirm("Skasować rozgrywkę razem ze składem?")) reset();
             }}
           >
-            Nowa gra
+            Nowa gra od zera
           </Button>
         </div>
       )}
@@ -690,10 +719,25 @@ export default function SetupPage() {
             title="Przydział ról"
             right={
               <div className="flex items-center gap-2">
+                {wPokoju && (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    disabled={assigned !== players.length || players.length === 0}
+                    title={
+                      assigned === players.length
+                        ? "Karty pojawią się na telefonach graczy"
+                        : "Najpierw przydziel karty wszystkim"
+                    }
+                    onClick={() => void wydajKarty()}
+                  >
+                    Wydaj karty na telefony
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   disabled={assigned === 0}
-                  onClick={() => router.push("/karty")}
+                  onClick={() => router.push("/manitou/karty")}
                 >
                   Karteczki do druku
                 </Button>

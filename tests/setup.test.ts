@@ -21,6 +21,8 @@ import {
   totalOf,
 } from "../src/lib/setup";
 import { DEFAULT_SETTINGS } from "../src/lib/engine";
+import { zachowajSklad } from "../src/lib/nowaGra";
+import { makeState } from "./helpers";
 import { ROLES, ROLE_BY_ID, fillerRole } from "../src/lib/roles";
 import { BOOK_FACTIONS, FACTIONS } from "../src/lib/types";
 
@@ -67,6 +69,49 @@ describe("Tabela składów z Xięgi", () => {
     for (const n of [4, 6, 8, 11, 31, 40]) {
       assert.equal(totalOf(suggestedCounts(n)), n, `${n} graczy`);
     }
+  });
+});
+
+describe("Nowa gra tym samym składem", () => {
+  const poGrze = () => {
+    const s = makeState(["szeryf", "herszt", "wodz", "mieszczanin"], { stage: "koniec" });
+    s.players[1].alive = false;
+    s.players[1].deathNote = "powieszony";
+    s.winner = "miasto";
+    s.winReason = "posążek odkryty";
+    s.night = 3;
+    s.settings.searchCount = 3;
+    s.setup.manualSettings = true;
+    return s;
+  };
+
+  it("zostają ludzie, ich kolejność i identyfikatory", () => {
+    const s = poGrze();
+    const przed = s.players.map((p) => [p.id, p.name, p.seat]);
+    zachowajSklad(s);
+    assert.deepEqual(
+      s.players.map((p) => [p.id, p.name, p.seat]),
+      przed,
+      "identyfikatory muszą przetrwać — w grze z lobby są też identyfikatorami w pokoju"
+    );
+  });
+
+  it("znika wszystko z zakończonej partii", () => {
+    const s = poGrze();
+    zachowajSklad(s);
+    assert.equal(s.stage, "setup");
+    assert.equal(s.winner, null);
+    assert.equal(s.night, 0);
+    assert.deepEqual(s.players.map((p) => p.roleId), [null, null, null, null]);
+    assert.deepEqual(s.players.map((p) => p.alive), [true, true, true, true]);
+    assert.equal(s.players[1].deathNote, undefined);
+  });
+
+  it("zasady dobrane pod ten stół zostają", () => {
+    const s = poGrze();
+    zachowajSklad(s);
+    assert.equal(s.settings.searchCount, 3, "ręcznie ustawiona liczba przeszukiwanych zostaje");
+    assert.equal(s.setup.manualSettings, true);
   });
 });
 

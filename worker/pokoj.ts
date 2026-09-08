@@ -30,6 +30,10 @@ export interface GraczWPokoju {
   dolaczyl: number;
   /** Miejsce na półkolu albo null, dopóki Manitou go nie posadzi. */
   miejsce: number | null;
+  /** Czy ma już przypisaną kartę. Samej karty prowadzący nie dostaje stąd. */
+  maKarte: boolean;
+  /** Kiedy potwierdził, że ją obejrzał — po tym Manitou wie, że można zaczynać. */
+  widzial: number | null;
 }
 
 export interface StanPokoju {
@@ -44,7 +48,14 @@ export interface StanPokoju {
 export interface StanGracza {
   kod: string;
   etap: EtapPokoju;
-  ja: { id: string; nazwa: string; miejsce: number | null } | null;
+  ja: {
+    id: string;
+    nazwa: string;
+    miejsce: number | null;
+    /** Własna karta — wyłącznie po wydaniu i wyłącznie dla właściciela klucza. */
+    rola: string | null;
+    widzial: number | null;
+  } | null;
   /** Imiona pozostałych — jawne i tak, bo wszyscy siedzą przy jednym stole. */
   imiona: string[];
 }
@@ -63,6 +74,8 @@ interface WierszGracza extends Record<string, SqlStorageValue> {
   dolaczyl: number;
   miejsce: number | null;
   token: string;
+  rola: string | null;
+  widzial: number | null;
 }
 
 export class Pokoj extends DurableObject<Env> {
@@ -129,12 +142,21 @@ export class Pokoj extends DurableObject<Env> {
       .toArray();
   }
 
+  /**
+   * Opis dla prowadzącego — bez kart.
+   *
+   * Manitou zna wszystkie karty ze swojego pulpitu, więc nie ma powodu
+   * wozić ich jeszcze raz przez sieć. Stąd tylko informacja, czy karta
+   * została wydana i czy gracz ją potwierdził.
+   */
   private opiszGraczy(): GraczWPokoju[] {
     return this.gracze().map((g) => ({
       id: g.id,
       nazwa: g.nazwa,
       dolaczyl: g.dolaczyl,
       miejsce: g.miejsce,
+      maKarte: g.rola !== null,
+      widzial: g.widzial,
     }));
   }
 
@@ -266,7 +288,16 @@ export class Pokoj extends DurableObject<Env> {
     return {
       kod: this.pole("kod") ?? "",
       etap: this.etap(),
-      ja: ja ? { id: ja.id, nazwa: ja.nazwa, miejsce: ja.miejsce } : null,
+      ja: ja
+        ? {
+            id: ja.id,
+            nazwa: ja.nazwa,
+            miejsce: ja.miejsce,
+            // Karta wychodzi dopiero po wydaniu i tylko do właściciela klucza.
+            rola: this.etap() === "rozdane" ? ja.rola : null,
+            widzial: ja.widzial,
+          }
+        : null,
       imiona: wszyscy.map((g) => g.nazwa),
     };
   }
@@ -320,9 +351,70 @@ export class Pokoj extends DurableObject<Env> {
   async ustawEtap(uzytkownik: string, etap: EtapPokoju): Promise<Wynik<StanPokoju>> {
     if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
     if (this.etap() === "rozdane" && etap !== "rozdane") {
-      return blad("Karty są już rozdane — zapisów nie da się otworzyć z powrotem.", 409);
+      return blad("Karty są rozdane — zacznij nową rundę, żeby zmienić zapisy.", 409);
     }
     this.ustaw("etap", etap);
+    this.rozeslij();
+    return { ok: true, dane: this.stanPelny() };
+  }
+
+  // ————————————————————————— karty —————————————————————————
+
+  /**
+   * Zapisuje rozdanie i wydaje karty na telefony.
+   *
+   * Losowanie zostaje po stronie prowadzącego: zna wszystkie karty tak czy
+   * inaczej, a dzięki temu całe dotychczasowe UI wyboru ról działa bez zmian.
+   * Pokój jest tu serwerem projekcji — pilnuje, żeby każdy dostał wyłącznie
+   * swoją kartę.
+   */
+  async rozdaj(
+    uzytkownik: string,
+    przypisania: { gracz: string; rola: string }[]
+  ): Promise<Wynik<StanPokoju>> {
+    if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
+    if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
+    if (przypisania.length === 0) return blad("Nie ma czego rozdawać.");
+
+    const znani = new Set(this.gracze().map((g) => g.id));
+    for (const { gracz, rola } of przypisania) {
+      if (!znani.has(gracz)) continue;
+      if (typeof rola !== "string" || rola.length > 64) continue;
+      this.sql.exec("UPDATE gracze SET rola = ?, widzial = NULL WHERE id = ?", rola, gracz);
+    }
+    this.ustaw("etap", "rozdane");
+    this.rozeslij();
+    return { ok: true, dane: this.stanPelny() };
+  }
+
+  /** Gracz potwierdza, że obejrzał kartę — prowadzący wie, kiedy zaczynać. */
+  async potwierdz(token: string): Promise<Wynik<StanGracza>> {
+    if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
+    const skrot = await sha256Hex(token);
+    this.sql.exec(
+      "UPDATE gracze SET widzial = ? WHERE token = ? AND widzial IS NULL",
+      Date.now(),
+      skrot
+    );
+    this.rozeslij();
+    return { ok: true, dane: this.stanDlaSkrotu(skrot) };
+  }
+
+  /**
+   * Nowa rozgrywka z tym samym składem i tym samym kodem.
+   *
+   * Karty znikają, ludzie i ich miejsca zostają — nikt nie musi wpisywać
+   * kodu ani imienia od nowa, a telefony same wrócą do poczekalni.
+   */
+  async nowaRunda(uzytkownik: string): Promise<Wynik<StanPokoju>> {
+    if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
+    if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
+    this.sql.exec("UPDATE gracze SET rola = NULL, widzial = NULL");
+    this.ustaw("etap", "zamkniete");
+    // Doba liczy się od nowa — nowa rozgrywka to nowy wieczór.
+    const wygasa = Date.now() + WAZNOSC_POKOJU_MS;
+    this.ustaw("wygasa", String(wygasa));
+    await this.ctx.storage.setAlarm(wygasa);
     this.rozeslij();
     return { ok: true, dane: this.stanPelny() };
   }
