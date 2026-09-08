@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/store";
 import { FACTIONS, FACTION_GOAL, FACTION_LABEL, Faction, Player } from "@/lib/types";
 import { ROLES, ROLE_BY_ID, TIER_LABEL, fillerRole, rolesOf } from "@/lib/roles";
+import { isTap } from "@/lib/gestures";
 import {
   RECOMMENDED_MAX,
   TABLE_MAX,
@@ -883,6 +884,16 @@ function FactionRoles({
   const list = ROLES.filter((r) => r.faction === faction && !r.filler);
   const autoCount = pool.filter((id) => !picked.includes(id) && id !== filler?.id).length;
 
+  /**
+   * Palcem po liście się przewija, więc dotknięcie samo w sobie nie może
+   * zaznaczać karty — dopiero puszczenie palca w tym samym miejscu. Mysz i rysik
+   * przełączają nadal przy naciśnięciu: tam nie ma przewijania gestem, a `click`
+   * domyka się dopiero na puszczeniu i przy szybkim klikaniu trafia w sąsiada.
+   */
+  const dotyk = useRef<{ id: number; roleId: string; x: number; y: number } | null>(null);
+  /** Znacznik czasu ostatniego przełączenia z wskaźnika — po nim `click` jest już zbędny. */
+  const obsluzone = useRef(0);
+
   return (
     <div className="rounded-md border border-[var(--border)] overflow-hidden">
       <div
@@ -927,18 +938,38 @@ function FactionRoles({
               }
             >
               <button
-                // Przełączenie następuje przy naciśnięciu, a nie przy `click`,
-                // który domyka się dopiero na puszczeniu przycisku. Przy szybkim
-                // klikaniu kursor bywa już nad sąsiadem albo lista zdąży się
-                // przesunąć, a wtedy przeglądarka zalicza kliknięcie gdzie indziej.
                 onPointerDown={(e) => {
                   if (blocked) return;
+                  if (e.pointerType === "touch") {
+                    // Zapamiętujemy start gestu; o zaznaczeniu zdecyduje dopiero
+                    // to, czy palec ruszył — bez preventDefault, żeby nie
+                    // zablokować przewijania listy.
+                    dotyk.current = { id: e.pointerId, roleId: r.id, x: e.clientX, y: e.clientY };
+                    return;
+                  }
                   e.preventDefault();
+                  obsluzone.current = e.timeStamp;
                   onToggle(r.id);
                 }}
-                // Klawiatura wysyła `click` bez zdarzeń wskaźnika (detail === 0).
+                onPointerUp={(e) => {
+                  if (blocked || e.pointerType !== "touch") return;
+                  const start = dotyk.current;
+                  dotyk.current = null;
+                  if (!start || start.id !== e.pointerId || start.roleId !== r.id) return;
+                  if (!isTap(start, { x: e.clientX, y: e.clientY })) return; // to było przewijanie
+                  obsluzone.current = e.timeStamp;
+                  onToggle(r.id);
+                }}
+                // Przewijanie odbiera gest — przeglądarka zgłasza wtedy anulowanie.
+                onPointerCancel={() => {
+                  dotyk.current = null;
+                }}
+                // Klawiatura wysyła `click` bez wcześniejszych zdarzeń wskaźnika.
                 onClick={(e) => {
-                  if (!blocked && e.detail === 0) onToggle(r.id);
+                  // Kliknięcie tuż po geście wskaźnika to jego echo, nie osobne
+                  // wejście; klawiatura przychodzi tu bez poprzedzającego gestu.
+                  if (e.timeStamp - obsluzone.current < 700) return;
+                  if (!blocked) onToggle(r.id);
                 }}
                 disabled={blocked}
                 className={cx(
