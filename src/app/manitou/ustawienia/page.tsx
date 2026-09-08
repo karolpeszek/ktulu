@@ -2,6 +2,7 @@
 
 import { Density, Handedness, Theme, usePrefs } from "@/lib/prefs";
 import { Card, cx } from "@/components/ui";
+import SekcjaKonta from "@/components/SekcjaKonta";
 
 function Segmented<T extends string>({
   value,
@@ -65,6 +66,8 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-4 max-w-[900px]">
+      <SekcjaKonta />
+
       <Card title="Wygląd">
         <Row
           title="Motyw"

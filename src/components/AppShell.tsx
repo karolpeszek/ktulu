@@ -84,12 +84,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           {uzytkownik ? (
             <Link
-              href="/manitou/konto"
+              href="/manitou/ustawienia"
               className={cx(
                 "text-[12.5px] px-2 py-1 rounded-[6px] hover:bg-[var(--surface-2)]",
-                path === "/manitou/konto" ? "text-[var(--text)]" : "text-[var(--text-dim)]"
+                path === "/manitou/ustawienia" ? "text-[var(--text)]" : "text-[var(--text-dim)]"
               )}
-              title="Konto i klucze"
+              title="Konto, klucze i ustawienia"
             >
               {uzytkownik.nazwa}
             </Link>

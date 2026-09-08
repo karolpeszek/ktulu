@@ -10,7 +10,8 @@
 import { HASH_BOOTSTRAPU } from "./bootstrap.generated";
 import { Konfiguracja, originDozwolony, sprawdzKonfiguracje } from "./config";
 import { KontekstWebAuthn, Wynik } from "./konta";
-import { sprawdzKodPokoju } from "../src/lib/kody";
+import { losujKodPokoju, sprawdzKodPokoju } from "../src/lib/kody";
+import type { EtapPokoju } from "../src/lib/lobby";
 import type { Env } from "./srodowisko";
 
 export { Konta } from "./konta";
@@ -160,13 +161,115 @@ async function obsluzApi(
     return odpowiedz(await konta.dodanieKluczaKoniec(sesja, dane?.odpowiedz as never, kontekst));
   }
 
-  // Sprawdzenie kodu przed dołączeniem — bez sesji, bo gracz jej nie ma.
-  const pokojMatch = sciezka.match(/^\/api\/pokoj\/([^/]+)$/);
-  if (pokojMatch && request.method === "GET") {
-    const sprawdzenie = sprawdzKodPokoju(decodeURIComponent(pokojMatch[1]));
-    if (!sprawdzenie.ok) return json({ error: sprawdzenie.powod }, 400);
-    const pokoj = env.POKOJE.getByName(sprawdzenie.kod);
-    return json(await pokoj.stan());
+  // Furtka dla testów integracyjnych: cykl życia pokoju wymaga sesji, a tej
+  // nie da się zdobyć bez fizycznego klucza. Warunek odcina ją na produkcji,
+  // gdzie RP_ID jest prawdziwą domeną — bez niej logowanie i tak nie działa.
+  if (sciezka === "/api/test/sesja" && post && konfiguracja.rpId === "localhost") {
+    const dane = await czytajJson(request);
+    const wynik = await konta._sesjaTestowa(tekst(dane, "nazwa") || "test");
+    return json({ uzytkownik: wynik.uzytkownik }, 200, {
+      "set-cookie": ciastkoSesji(wynik.sesja, Date.now() + 3600_000, https),
+    });
+  }
+
+  // ——————————————————————— pokoje ———————————————————————
+
+  /** Wspólny wstęp dla tras z kodem w adresie. */
+  const zKodem = (surowy: string) => {
+    const w = sprawdzKodPokoju(decodeURIComponent(surowy));
+    return w.ok ? { kod: w.kod, pokoj: env.POKOJE.getByName(w.kod) } : null;
+  };
+
+  /** Tożsamość gracza: losowy klucz z jego przeglądarki, nie sesja. */
+  const tokenGracza = (dane: Record<string, unknown> | null) =>
+    tekst(dane, "token") || request.headers.get("x-ktulu-gracz") || "";
+
+  // Zakładanie pokoju losuje kod i przy kolizji próbuje ponownie. Sam obiekt
+  // odmawia założenia się dwa razy, więc to on jest tu jedynym arbitrem.
+  if (sciezka === "/api/pokoj" && post) {
+    const ja = await konta.ktoTo(sesja, konfiguracja.rpId);
+    if (!ja) return json({ error: "Trzeba być zalogowanym." }, 401);
+    for (let proba = 0; proba < 8; proba += 1) {
+      const kod = losujKodPokoju();
+      const wynik = await env.POKOJE.getByName(kod).zaloz(kod, ja.id);
+      if (wynik.ok) return json(wynik.dane);
+    }
+    return json({ error: "Nie udało się wylosować wolnego kodu. Spróbuj jeszcze raz." }, 503);
+  }
+
+  const pokojMatch = sciezka.match(/^\/api\/pokoj\/([^/]+)(\/[a-z-]+)?$/);
+  if (pokojMatch) {
+    const cel = zKodem(pokojMatch[1]);
+    if (!cel) {
+      const w = sprawdzKodPokoju(decodeURIComponent(pokojMatch[1]));
+      return json({ error: w.ok ? "Zły kod pokoju." : w.powod }, 400);
+    }
+    const koncowka = pokojMatch[2] ?? "";
+    const { pokoj } = cel;
+
+    // Samo istnienie pokoju jest jawne — inaczej gracz nie odróżniłby
+    // literówki od zamkniętych zapisów.
+    if (koncowka === "" && request.method === "GET") return json(await pokoj.stan());
+
+    if (koncowka === "/dolacz" && post) {
+      const dane = await czytajJson(request);
+      const token = tokenGracza(dane);
+      if (!token) return json({ error: "Brak tożsamości gracza." }, 400);
+      return odpowiedz(await pokoj.dolacz(token, tekst(dane, "nazwa")));
+    }
+
+    if (koncowka === "/ja" && request.method === "GET") {
+      const token = request.headers.get("x-ktulu-gracz") ?? "";
+      if (!token) return json({ error: "Brak tożsamości gracza." }, 400);
+      return odpowiedz(await pokoj.stanDlaGracza(token));
+    }
+
+    // Wszystko poniżej należy do prowadzącego.
+    const ja = await konta.ktoTo(sesja, konfiguracja.rpId);
+    if (!ja) return json({ error: "Trzeba być zalogowanym." }, 401);
+
+    if (koncowka === "/podglad") {
+      // Tożsamość dokładamy w nagłówku: do obiektu pokoju nie da się dostać
+      // inaczej niż przez tego Workera, więc podrobić jej nie sposób.
+      const przekazane = new Request(request);
+      przekazane.headers.set("x-ktulu-uzytkownik", ja.id);
+      return pokoj.fetch(przekazane);
+    }
+
+    if (koncowka === "" && request.method === "DELETE") return odpowiedz(await pokoj.zamknijNaZawsze(ja.id));
+
+    if (koncowka === "/manitou" && request.method === "GET") {
+      return odpowiedz(await pokoj.stanDlaManitou(ja.id));
+    }
+
+    if (koncowka === "/usadz" && post) {
+      const dane = await czytajJson(request);
+      const miejsce = dane?.miejsce;
+      return odpowiedz(
+        await pokoj.usadz(ja.id, tekst(dane, "gracz"), typeof miejsce === "number" ? miejsce : null)
+      );
+    }
+
+    if (koncowka === "/przemianuj" && post) {
+      const dane = await czytajJson(request);
+      return odpowiedz(await pokoj.przemianuj(ja.id, tekst(dane, "gracz"), tekst(dane, "nazwa")));
+    }
+
+    if (koncowka === "/wyrzuc" && post) {
+      const dane = await czytajJson(request);
+      return odpowiedz(await pokoj.wyrzuc(ja.id, tekst(dane, "gracz")));
+    }
+
+    if (koncowka === "/etap" && post) {
+      const dane = await czytajJson(request);
+      const etap = tekst(dane, "etap");
+      if (etap !== "lobby" && etap !== "zamkniete" && etap !== "rozdane") {
+        return json({ error: "Nieznany etap." }, 400);
+      }
+      return odpowiedz(await pokoj.ustawEtap(ja.id, etap as EtapPokoju));
+    }
+
+    return json({ error: "Nie ma takiego zasobu." }, 404);
   }
 
   if (sciezka === "/api/admin/konta" && request.method === "GET") {

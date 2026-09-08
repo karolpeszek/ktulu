@@ -1,11 +1,18 @@
 "use client";
 
-/** Konto: klucze urządzeń, a dla administratora także zarządzanie dostępem. */
+/**
+ * Konto prowadzącego: klucze urządzeń, a dla administratora także kody
+ * rejestracyjne i zarządzanie dostępem.
+ *
+ * Siedzi w ustawieniach, bo to ten sam rodzaj rzeczy — coś, co ustawia się raz
+ * i do czego wraca się rzadko. Osobny ekran tylko na to byłby pustym klikiem.
+ */
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Rola, Uzytkownik, useKonto } from "@/lib/konto";
 import { Badge, Button, Card, Empty, inputCls } from "@/components/ui";
+import { pogrupuj } from "@/lib/kody";
 
 interface Zaproszenie {
   kod: string;
@@ -16,7 +23,7 @@ interface Zaproszenie {
 
 const dataPl = (t: number) => new Date(t).toLocaleDateString("pl-PL");
 
-export default function KontoPage() {
+export default function SekcjaKonta() {
   const { uzytkownik, trybLokalny, dodajKlucz, wyloguj, odswiez } = useKonto();
   const router = useRouter();
   const [blad, setBlad] = useState<string | null>(null);
@@ -85,7 +92,7 @@ export default function KontoPage() {
 
   if (!uzytkownik) {
     return (
-      <Card title="Konto">
+      <Card title="Konto prowadzącego">
         <p className="text-[12.5px] text-[var(--text-dim)]">
           {trybLokalny
             ? "Pracujesz bez konta — gra jest zapisana wyłącznie na tym urządzeniu, a lobby jest niedostępne."
@@ -105,7 +112,7 @@ export default function KontoPage() {
   return (
     <div className="flex flex-col gap-4">
       <Card
-        title="Twoje konto"
+        title="Konto prowadzącego"
         right={<Badge color={admin ? "var(--accent)" : undefined}>{uzytkownik.rola}</Badge>}
       >
         <div className="text-[13px] font-medium">{uzytkownik.nazwa}</div>
@@ -184,7 +191,7 @@ export default function KontoPage() {
               <div className="flex flex-col gap-1.5">
                 {zaproszenia.map((z) => (
                   <div key={z.kod} className="ui-row flex items-center gap-3 text-[12.5px]">
-                    <code className="font-mono tracking-wide">{z.kod}</code>
+                    <code className="font-mono tracking-wide">{pogrupuj(z.kod, 4)}</code>
                     <Badge>{z.rola}</Badge>
                     <span className="text-[var(--text-faint)]">
                       {z.zuzytePrzez ? "wykorzystany" : `ważny do ${dataPl(z.wygasa)}`}

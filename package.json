@@ -12,6 +12,7 @@
     "icons": "node scripts/gen-icons.mjs",
     "lint": "eslint",
     "test": "node --import tsx --test tests/*.test.ts",
+    "test:lobby": "node scripts/test-lobby.mjs",
     "typecheck": "tsc --noEmit",
     "typecheck:worker": "tsc --noEmit -p worker/tsconfig.json",
     "verify": "node scripts/gen-bootstrap.mjs && pnpm run lint && pnpm run typecheck && pnpm run typecheck:worker && pnpm run test",

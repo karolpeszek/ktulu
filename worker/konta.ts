@@ -663,6 +663,31 @@ export class Konta extends DurableObject<Env> {
     return { ok: true, dane: null };
   }
 
+  /**
+   * Wyłącznie do testów: konto i sesja bez przechodzenia przez passkey.
+   *
+   * Wołane tylko z trasy odciętej warunkiem `RP_ID === "localhost"`, więc na
+   * produkcji jest nieosiągalne — tam RP_ID jest prawdziwą domeną, bez której
+   * logowanie i tak by nie działało. Bez tego cykl życia pokoju nie dałby się
+   * sprawdzić inaczej niż ręcznie, z czytnikiem w dłoni.
+   */
+  async _sesjaTestowa(nazwa: string): Promise<{ sesja: string; uzytkownik: string }> {
+    const istniejacy = this.sql
+      .exec<WierszUzytkownika>("SELECT * FROM uzytkownicy WHERE nazwa = ?", nazwa)
+      .toArray()[0];
+    let id = istniejacy?.id;
+    if (!id) {
+      id = doBase64Url(crypto.getRandomValues(new Uint8Array(16)));
+      this.sql.exec(
+        "INSERT INTO uzytkownicy (id, nazwa, rola, utworzono) VALUES (?, ?, 'admin', ?)",
+        id,
+        nazwa,
+        Date.now()
+      );
+    }
+    return { sesja: this.utworzSesje(id).id, uzytkownik: id };
+  }
+
   /** Wyłącznie do testów: czyści bazę obiektu. */
   async _wyczyscWszystko(): Promise<void> {
     for (const t of ["uzytkownicy", "klucze", "zaproszenia", "sesje", "wyzwania", "zuzyte_bootstrapy"]) {

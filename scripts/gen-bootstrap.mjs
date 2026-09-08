@@ -37,12 +37,18 @@ export const HASH_BOOTSTRAPU = ${JSON.stringify(hash)};
 `
 );
 
+// Bez prawej krawędzi i bez znaków rysujących ramkę.
+// Przeglądarka logów Cloudflare renderuje `─` i `│` inną szerokością niż
+// spację, więc każde pudełko z prawym bokiem rozjeżdża się niezależnie od
+// tego, jak dokładnie policzy się odstępy. Tu nie ma czego wyrównywać.
+const kreska = "=".repeat(52);
+
 console.log("");
-console.log("  ┌───────────────────────────────────────────────┐");
-console.log("  │  KOD REJESTRACYJNY PIERWSZEGO ADMINISTRATORA  │");
-console.log("  ├───────────────────────────────────────────────┤");
-console.log(`  │              ${kod}               │`);
-console.log("  └───────────────────────────────────────────────┘");
+console.log(kreska);
+console.log("  KOD REJESTRACYJNY PIERWSZEGO ADMINISTRATORA");
+console.log("");
+console.log(`      ${kod}`);
+console.log(kreska);
 console.log("");
 console.log("  Wpisz go na /manitou/rejestracja, żeby założyć konto admina.");
 console.log("  Działa tylko dopóki nie istnieje żadne konto i zmienia się przy każdym buildzie.");

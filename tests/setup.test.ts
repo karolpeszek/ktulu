@@ -20,6 +20,7 @@ import {
   suggestedCounts,
   totalOf,
 } from "../src/lib/setup";
+import { DEFAULT_SETTINGS } from "../src/lib/engine";
 import { ROLES, ROLE_BY_ID, fillerRole } from "../src/lib/roles";
 import { BOOK_FACTIONS, FACTIONS } from "../src/lib/types";
 
@@ -66,6 +67,18 @@ describe("Tabela składów z Xięgi", () => {
     for (const n of [4, 6, 8, 11, 31, 40]) {
       assert.equal(totalOf(suggestedCounts(n)), n, `${n} graczy`);
     }
+  });
+});
+
+describe("Ustawienia domyślne", () => {
+  it("teatrzyk jest włączony od początku", () => {
+    // Budzenie nieaktywnych postaci to podstawowy sposób ukrycia, kto tej nocy
+    // naprawdę działa — bez niego sama cisza zdradza, że dana rola odpada.
+    assert.equal(DEFAULT_SETTINGS.wakeInactiveForShow, true);
+  });
+
+  it("Xięga odradza dobijanie okradanego, więc domyślnie jest wyłączone", () => {
+    assert.equal(DEFAULT_SETTINGS.banditsCanKill, false);
   });
 });
 
