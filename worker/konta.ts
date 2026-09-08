@@ -28,7 +28,7 @@ import type {
 } from "@simplewebauthn/server";
 
 import { doBase64Url, naBajty, rowneStalyCzas, sha256Hex, zBase64Url } from "./bytes";
-import { losujKodRejestracji, losujZnaki, rdzenKodu } from "./kody";
+import { losujKodRejestracji, losujZnaki, rdzenKodu } from "../src/lib/kody";
 
 export type Rola = "admin" | "manitou";
 

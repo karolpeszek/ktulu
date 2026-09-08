@@ -13,7 +13,7 @@ import {
   rdzenKodu,
   sprawdzKodPokoju,
   sprawdzKodRejestracji,
-} from "../worker/kody";
+} from "../src/lib/kody";
 
 describe("Alfabet kodów", () => {
   it("nie zawiera znaków mylonych przy przepisywaniu", () => {
