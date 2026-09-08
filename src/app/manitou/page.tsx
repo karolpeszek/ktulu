@@ -224,7 +224,7 @@ export default function SetupPage() {
       s.setup.counts = counts;
       s.setup.manualCounts = true;
     });
-    router.push("/gra");
+    router.push("/manitou/gra");
   };
 
   const ready = players.length >= 4 && assigned === players.length && countsTotal === players.length;
@@ -239,7 +239,7 @@ export default function SetupPage() {
             Rozgrywka jest w toku ({state.stage === "night" ? `noc ${state.night}` : `dzień ${state.day}`}
             ). Zmiany w przygotowaniu nie wpłyną na trwającą grę.
           </span>
-          <Button variant="primary" size="sm" onClick={() => router.push("/gra")}>
+          <Button variant="primary" size="sm" onClick={() => router.push("/manitou/gra")}>
             Wróć do rozgrywki
           </Button>
           <Button
@@ -693,7 +693,7 @@ export default function SetupPage() {
                 <Button
                   size="sm"
                   disabled={assigned === 0}
-                  onClick={() => router.push("/karty")}
+                  onClick={() => router.push("/manitou/karty")}
                 >
                   Karteczki do druku
                 </Button>
