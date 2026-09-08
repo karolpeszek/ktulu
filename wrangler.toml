@@ -10,6 +10,11 @@ compatibility_date = "2026-08-31"
 # Adresy podglądu dla gałęzi. Bez jawnego ustawienia dziedziczą stan pola
 # `workers_dev`, którego tu nie ma — a wtedy Cloudflare przyjmuje, że są
 # wyłączone, i build kończy się bez adresu do otwarcia.
+#
+# Pułapka: ustawień Workera nie stosuje `wrangler versions upload`, a właśnie
+# tego używa Workers Builds dla gałęzi innych niż produkcyjna. Ta linijka
+# zaczyna obowiązywać dopiero po deployu z gałęzi produkcyjnej — albo po
+# przestawieniu przełącznika w panelu, czego już się nie cofnie.
 preview_urls = true
 
 # Zmienne ustawiane w panelu Cloudflare (RP_ID dla passkeyów) przeżywają
