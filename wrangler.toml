@@ -33,12 +33,21 @@ class_name = "Konta"
 
 # Pokój gry jest tu już teraz, choć lobby powstaje w kolejnym kroku: zmiany
 # cyklu życia Durable Objectów przechodzą wyłącznie pełnym `wrangler deploy`,
-# a podglądy gałęzi używają `versions upload`, które je odrzuca. Obie klasy
-# w jednej migracji oznaczają, że koszt ponosimy raz.
+# a podglądy gałęzi używają `versions upload`, które je odrzuca. Klasa wchodzi
+# więc od razu, żeby zejście na produkcję po migrację nie powtarzało się przy
+# każdym kroku lobby.
 [[durable_objects.bindings]]
 name = "POKOJE"
 class_name = "Pokoj"
 
+# Znacznik raz zastosowanej migracji jest niezmienny: Cloudflare pamięta, że
+# `v1` już przeszło, i pomija ją niezależnie od tego, co się w niej znajduje.
+# Dopisanie klasy do zastosowanego znacznika nie robi więc nic — nowa klasa
+# musi dostać własny znacznik.
 [[migrations]]
 tag = "v1"
-new_sqlite_classes = ["Konta", "Pokoj"]
+new_sqlite_classes = ["Konta"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Pokoj"]
