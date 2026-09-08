@@ -13,7 +13,7 @@ import {
 } from "@/lib/engine";
 import { TARGET_AFTER_YES, nextIndex, resolveStep } from "@/lib/resolve";
 import { ROLE_BY_ID } from "@/lib/roles";
-import { Badge, Button, Card, FACTION_COLOR, Tooltip, cx } from "./ui";
+import { Badge, Button, Card, FACTION_COLOR, SecretBackdrop, Tooltip, cx } from "./ui";
 import SeatArc, { SeatLegend } from "./SeatArc";
 import JoyOverlay from "./JoyOverlay";
 
@@ -132,10 +132,10 @@ export default function NightPanel() {
           type="button"
           onClick={() => setRevealBanner(null)}
           className="fixed inset-0 z-50 p-4 sm:p-8"
-          style={{ background: "rgb(0 0 0 / 0.72)" }}
         >
+          <SecretBackdrop opacity={0.88} />
           <div
-            className="h-full w-full rounded-2xl border grid place-items-center text-center px-4"
+            className="relative h-full w-full rounded-2xl border grid place-items-center text-center px-4"
             style={{
               background: FACTION_COLOR[revealBanner.faction],
               borderColor: "color-mix(in srgb, var(--surface) 35%, transparent)",

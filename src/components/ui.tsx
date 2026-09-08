@@ -324,6 +324,28 @@ export function Tooltip({
   );
 }
 
+/**
+ * Tło pod pełnoekranową nakładką, którą pokazuje się graczom. Rozmycie leży na
+ * warstwie wychodzącej poza ekran: filtr próbkuje wtedy piksele spoza
+ * widocznego obszaru, więc przy krawędziach nie zostaje pas ostrego obrazu,
+ * z którego dałoby się coś odczytać. Przyciemnienie dokłada się do rozmycia i
+ * ratuje sytuację tam, gdzie przeglądarka nie obsługuje `backdrop-filter`.
+ */
+export function SecretBackdrop({ opacity = 0.82 }: { opacity?: number }) {
+  return (
+    <span
+      aria-hidden
+      className="fixed pointer-events-none"
+      style={{
+        inset: "-72px",
+        background: `rgb(0 0 0 / ${opacity})`,
+        backdropFilter: "blur(28px) saturate(0.5)",
+        WebkitBackdropFilter: "blur(28px) saturate(0.5)",
+      }}
+    />
+  );
+}
+
 export function Empty({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-[13px] text-[var(--text-faint)] py-6 text-center border border-dashed border-[var(--border)] rounded-md">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Button } from "./ui";
+import { Button, SecretBackdrop } from "./ui";
 
 /** Janosik zamachał ciupagą — wszyscy się cieszą. */
 export default function JoyOverlay({ onClose }: { onClose: () => void }) {
@@ -11,11 +11,11 @@ export default function JoyOverlay({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/55 backdrop-blur-[2px] p-6"
-      onClick={onClose}
-    >
-      <div className="anim-joy bg-[var(--surface)] border border-[var(--border)] rounded-xl px-10 py-8 text-center max-w-md shadow-2xl">
+    <div className="fixed inset-0 z-50 grid place-items-center p-6" onClick={onClose}>
+      {/* Nakładkę pokazuje się całemu stołowi, więc pod spodem nie może dać się
+          odczytać skład rady ani położenie posążka. */}
+      <SecretBackdrop opacity={0.8} />
+      <div className="relative anim-joy bg-[var(--surface)] border border-[var(--border)] rounded-xl px-10 py-8 text-center max-w-md shadow-2xl">
         <div className="text-[56px] leading-none mb-3">🪓</div>
         <h2 className="text-[22px] font-semibold tracking-tight">Janosik zamachał ciupagą</h2>
         <p className="mt-2 text-[14px] text-[var(--text-dim)] leading-relaxed">
