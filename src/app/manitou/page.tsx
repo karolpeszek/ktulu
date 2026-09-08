@@ -275,7 +275,11 @@ export default function SetupPage() {
             size="sm"
             variant="danger"
             onClick={() => {
-              if (confirm("Skasować rozgrywkę razem ze składem?")) reset();
+              if (!confirm("Skasować rozgrywkę razem ze składem?")) return;
+              // Pokój też musi wrócić do punktu wyjścia — inaczej zostałby
+              // z rozdanymi kartami, do których nie ma już żadnej listy graczy.
+              void pokoj.nowaRunda();
+              reset();
             }}
           >
             Nowa gra od zera

@@ -61,9 +61,9 @@ export default function KartaLobby({
 
   const pula = stan.gracze.filter((g) => !posadzeni.includes(g.id));
   const zapisyOtwarte = stan.etap === "lobby";
+  const rozdane = stan.etap === "rozdane";
   const zKarta = stan.gracze.filter((g) => g.maKarte);
   const widzieli = zKarta.filter((g) => g.widzial !== null);
-  const rozdane = stan.etap === "rozdane";
 
   return (
     <>
@@ -87,8 +87,8 @@ export default function KartaLobby({
                     : "Brak połączenia z pokojem"
               }
             />
-            <Badge color={zapisyOtwarte ? "var(--ok)" : "var(--text-dim)"}>
-              {zapisyOtwarte ? "zapisy otwarte" : "zapisy zamknięte"}
+            <Badge color={zapisyOtwarte ? "var(--ok)" : rozdane ? "var(--accent)" : "var(--text-dim)"}>
+              {zapisyOtwarte ? "zapisy otwarte" : rozdane ? "karty rozdane" : "zapisy zamknięte"}
             </Badge>
           </div>
         }
@@ -106,12 +106,21 @@ export default function KartaLobby({
         </div>
 
         <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <Button
-            size="sm"
-            onClick={() => void pokoj.ustawEtap(zapisyOtwarte ? "zamkniete" : "lobby")}
-          >
-            {zapisyOtwarte ? "Zamknij zapisy" : "Otwórz zapisy"}
-          </Button>
+          {/* Po rozdaniu zapisów nie da się otworzyć wprost — najpierw trzeba
+              wyczyścić karty, więc pokazujemy dokładnie tę akcję zamiast
+              przycisku, który odbiłby się o komunikat błędu. */}
+          {rozdane ? (
+            <Button size="sm" variant="primary" onClick={() => void pokoj.nowaRunda()}>
+              Nowa runda — wyczyść karty
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => void pokoj.ustawEtap(zapisyOtwarte ? "zamkniete" : "lobby")}
+            >
+              {zapisyOtwarte ? "Zamknij zapisy" : "Otwórz zapisy"}
+            </Button>
+          )}
           {pula.length > 0 && (
             <Button size="sm" onClick={() => pula.forEach(onPosadz)}>
               Posadź wszystkich ({pula.length})
