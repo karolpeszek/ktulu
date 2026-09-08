@@ -7,6 +7,11 @@ name = "ktulu"
 main = "worker/index.ts"
 compatibility_date = "2026-08-31"
 
+# Adresy podglądu dla gałęzi. Bez jawnego ustawienia dziedziczą stan pola
+# `workers_dev`, którego tu nie ma — a wtedy Cloudflare przyjmuje, że są
+# wyłączone, i build kończy się bez adresu do otwarcia.
+preview_urls = true
+
 # Zmienne ustawiane w panelu Cloudflare (RP_ID dla passkeyów) przeżywają
 # deploy tylko wtedy, gdy wrangler ich nie kasuje. Domyślnie plik konfiguracji
 # jest źródłem prawdy i wymiata wszystko, czego w nim nie ma.
