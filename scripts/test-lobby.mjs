@@ -219,7 +219,14 @@ sprawdz(bezMarka.tresc.gracze?.length === 1, "prowadzący wyrzuca gracza");
     headers: { "x-ktulu-gracz": "token-obcego" },
   });
   sprawdz(obcy.tresc.ja === null, "obcy klucz nie dostaje cudzej karty");
-  sprawdz(!JSON.stringify(obcy.tresc).includes("szeryf"), "w odpowiedzi dla obcego nie ma kart");
+  // Skład rozgrywki jest jawny z założenia — to ta sama wiedza, którą przy
+  // papierowych kartach daje pytanie do Manitou. Tajne jest przypisanie kart
+  // do osób, więc pilnujemy właśnie tego.
+  sprawdz(obcy.tresc.ujawnieni?.length === 0, "dla obcego nie ma żadnego przypisania karty do imienia");
+  sprawdz(
+    !JSON.stringify(obcy.tresc.imiona ?? []).includes("szeryf"),
+    "imiona nie niosą ze sobą kart"
+  );
 
   const potwierdzone = await zapytaj(`/api/pokoj/${kod}/widzialem`, {
     method: "POST",
@@ -233,11 +240,46 @@ sprawdz(bezMarka.tresc.gracze?.length === 1, "prowadzący wyrzuca gracza");
     "prowadzący widzi potwierdzenie"
   );
 
+  // — skład rozgrywki i odkrywanie zmarłych —
+  const zeSkladem = await zapytaj(`/api/pokoj/${kod}/ja`, {
+    headers: { "x-ktulu-gracz": "token-kasi" },
+  });
+  sprawdz(zeSkladem.tresc.sklad?.includes("szeryf"), "gracz widzi skład rozgrywki");
+  sprawdz(zeSkladem.tresc.ujawnieni?.length === 0, "przed śmiercią nikt nie jest odkryty");
+
+  const obcyWidzi = await zapytaj(`/api/pokoj/${kod}/ja`, {
+    headers: { "x-ktulu-gracz": "token-obcego" },
+  });
+  sprawdz(
+    obcyWidzi.tresc.sklad?.length === zeSkladem.tresc.sklad?.length,
+    "skład jest jawny także dla kogoś bez karty"
+  );
+
+  const odkryte = await zapytaj(`/api/pokoj/${kod}/ujawnij`, {
+    method: "POST",
+    body: JSON.stringify({ gracze: [kasia.id] }),
+  });
+  sprawdz(
+    odkryte.tresc.gracze.find((g) => g.id === kasia.id)?.ujawniony === true,
+    "prowadzący odkrywa kartę zmarłego"
+  );
+
+  const poOdkryciu = await zapytaj(`/api/pokoj/${kod}/ja`, {
+    headers: { "x-ktulu-gracz": "token-obcego" },
+  });
+  sprawdz(
+    poOdkryciu.tresc.ujawnieni?.[0]?.rola === "szeryf" &&
+      poOdkryciu.tresc.ujawnieni?.[0]?.imie === "Kasia",
+    "odkryta karta pokazuje się z imieniem",
+    JSON.stringify(poOdkryciu.tresc.ujawnieni)
+  );
+
   // — nowa runda tym samym składem —
   const nowa = await zapytaj(`/api/pokoj/${kod}/nowa-runda`, { method: "POST" });
   sprawdz(nowa.tresc.gracze.length === uProwadzacego.tresc.gracze.length, "skład przeżywa nową rundę");
   sprawdz(nowa.tresc.gracze.every((g) => !g.maKarte), "karty znikają");
   sprawdz(nowa.tresc.gracze.every((g) => g.widzial === null), "potwierdzenia się zerują");
+  sprawdz(nowa.tresc.gracze.every((g) => !g.ujawniony), "odkrycia się zerują");
   sprawdz(nowa.tresc.gracze.every((g) => g.miejsce !== undefined), "miejsca zostają");
 
   const poNowej = await zapytaj(`/api/pokoj/${kod}/ja`, {
@@ -245,6 +287,8 @@ sprawdz(bezMarka.tresc.gracze?.length === 1, "prowadzący wyrzuca gracza");
   });
   sprawdz(poNowej.tresc.ja?.rola === null, "telefon wraca do poczekalni");
   sprawdz(poNowej.tresc.ja?.nazwa === "Kasia", "gracz nie musi wpisywać imienia od nowa");
+  sprawdz(poNowej.tresc.sklad?.length === 0, "skład poprzedniej gry znika");
+  sprawdz(poNowej.tresc.ujawnieni?.length === 0, "odkrycia poprzedniej gry znikają");
 }
 
 // — cudzy pokój —

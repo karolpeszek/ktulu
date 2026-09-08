@@ -14,6 +14,7 @@ import { Button, Card, inputCls } from "@/components/ui";
 import { MAKS_DLUGOSC_IMIENIA } from "@/lib/lobby";
 import { tozsamoscGracza } from "@/lib/tozsamosc";
 import KartaGracza from "./KartaGracza";
+import KartyWGrze from "./KartyWGrze";
 
 interface StanGracza {
   kod: string;
@@ -26,6 +27,8 @@ interface StanGracza {
     widzial: number | null;
   } | null;
   imiona: string[];
+  sklad: string[];
+  ujawnieni: { rola: string; imie: string }[];
 }
 
 /** Jak często pytamy serwer, gdy ekran jest na wierzchu. */
@@ -182,12 +185,15 @@ export default function Poczekalnia({ kod, wyjdz }: { kod: string; wyjdz: () => 
           )}
         </Card>
       ) : karta ? (
-        <KartaGracza
-          roleId={karta}
-          imie={stan!.ja!.nazwa}
-          potwierdzone={stan!.ja!.widzial !== null}
-          onPotwierdz={() => void potwierdz()}
-        />
+        <>
+          <KartaGracza
+            roleId={karta}
+            imie={stan!.ja!.nazwa}
+            potwierdzone={stan!.ja!.widzial !== null}
+            onPotwierdz={() => void potwierdz()}
+          />
+          <KartyWGrze sklad={stan!.sklad} ujawnieni={stan!.ujawnieni} />
+        </>
       ) : (
         <Card>
           <div className="text-center">
