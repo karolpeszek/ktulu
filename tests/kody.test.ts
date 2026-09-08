@@ -44,8 +44,13 @@ describe("Alfabet kodów", () => {
 });
 
 describe("Format kodów", () => {
-  it("kod pokoju ma prefiks i cztery znaki", () => {
-    assert.match(losujKodPokoju(), /^KTULU-[2-9A-HJKMNP-Z]{4}$/);
+  it("kod pokoju to cztery gołe znaki", () => {
+    assert.match(losujKodPokoju(), /^[2-9A-HJKMNP-Z]{4}$/);
+  });
+
+  it("dawny zapis z prefiksem nadal się wpisuje", () => {
+    const w = sprawdzKodPokoju("KTULU-AB3D");
+    assert.equal(w.ok && w.kod, "AB3D");
   });
 
   it("kod rejestracji ma trzy grupy po cztery", () => {

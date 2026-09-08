@@ -7,14 +7,34 @@
  * Prowadzący wchodzi na swój pulpit przyciskiem w prawym górnym rogu.
  */
 
-import { Suspense, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Button, Card, inputCls } from "@/components/ui";
-import { DLUGOSC_KODU_POKOJU, PREFIKS_POKOJU, rdzenKodu, sprawdzKodPokoju } from "@/lib/kody";
+import { Button, Card } from "@/components/ui";
+import PolaKodu from "@/components/PolaKodu";
+import { DLUGOSC_KODU_POKOJU, rdzenKodu, sprawdzKodPokoju } from "@/lib/kody";
+
+/**
+ * Kod z adresu czytany bez `useSearchParams`.
+ *
+ * Ten hook wymusza granicę Suspense, przez którą przy eksporcie statycznym
+ * w gotowym HTML-u ląduje sam fallback — a to jest pierwszy ekran, jaki widzi
+ * gracz. Odczyt spoza Reacta pozwala wyeksportować gotowy formularz.
+ */
+const bezZmian = (cb: () => void) => {
+  window.addEventListener("popstate", cb);
+  return () => window.removeEventListener("popstate", cb);
+};
+
+function useKodZAdresu(): string {
+  return useSyncExternalStore(
+    bezZmian,
+    () => new URLSearchParams(window.location.search).get("k") ?? "",
+    () => ""
+  );
+}
 
 function Formularz() {
-  const parametry = useSearchParams();
+  const zAdresu = useKodZAdresu();
   const [wpisane, setWpisane] = useState<string | null>(null);
   const [blad, setBlad] = useState<string | null>(null);
   const [trwa, setTrwa] = useState(false);
@@ -22,18 +42,19 @@ function Formularz() {
   // Kod z linku albo z kodu QR pokazanego przez Manitou wypełnia pole sam.
   // Wartość jest wyliczana, a nie kopiowana efektem: dopóki nikt nic nie
   // wpisał, obowiązuje ta z adresu, a pierwsze naciśnięcie klawisza ją zastępuje.
-  const zLinku = rdzenKodu(parametry.get("k") ?? "").slice(0, DLUGOSC_KODU_POKOJU);
+  const zLinku = rdzenKodu(zAdresu).slice(0, DLUGOSC_KODU_POKOJU);
   const kod = wpisane ?? zLinku;
   const setKod = setWpisane;
 
   const sprawdzenie = sprawdzKodPokoju(kod);
 
-  const dolacz = async () => {
-    if (!sprawdzenie.ok) return;
+  const dolacz = async (podany?: string) => {
+    const wynik = podany ? sprawdzKodPokoju(podany) : sprawdzenie;
+    if (!wynik.ok) return;
     setBlad(null);
     setTrwa(true);
     try {
-      const odp = await fetch(`/api/pokoj/${sprawdzenie.kod}`);
+      const odp = await fetch(`/api/pokoj/${wynik.kod}`);
       const dane = (await odp.json().catch(() => ({}))) as { istnieje?: boolean; error?: string };
       if (!odp.ok) throw new Error(dane.error ?? `Błąd ${odp.status}.`);
       if (!dane.istnieje) {
@@ -55,34 +76,26 @@ function Formularz() {
 
   return (
     <Card>
-      <div className="label-xs mb-1.5">Kod pokoju</div>
-      <div className="flex items-stretch gap-2">
-        <span className="grid place-items-center px-3 rounded-[6px] bg-[var(--surface-2)] border border-[var(--border)] text-[13px] text-[var(--text-dim)] font-mono shrink-0">
-          {PREFIKS_POKOJU}-
-        </span>
-        <input
-          className={inputCls}
-          value={kod}
-          onChange={(e) => setKod(rdzenKodu(e.target.value).slice(0, DLUGOSC_KODU_POKOJU))}
-          onKeyDown={(e) => e.key === "Enter" && dolacz()}
-          placeholder="XXXX"
-          autoCapitalize="characters"
-          autoComplete="off"
-          spellCheck={false}
-          autoFocus
-        />
-      </div>
-      {kod && !sprawdzenie.ok && (
-        <p className="text-[12px] mt-1.5" style={{ color: "var(--warn)" }}>
+      <div className="label-xs mb-2 text-center">Kod pokoju</div>
+      <PolaKodu
+        dlugosc={DLUGOSC_KODU_POKOJU}
+        wartosc={kod}
+        onChange={setKod}
+        // Po ostatnim znaku nie ma na co czekać — sprawdzamy od razu.
+        onKomplet={(v) => dolacz(v)}
+        autoFocus
+      />
+      {kod.length === DLUGOSC_KODU_POKOJU && !sprawdzenie.ok && (
+        <p className="text-[12px] mt-2 text-center" style={{ color: "var(--warn)" }}>
           {sprawdzenie.powod}
         </p>
       )}
 
       <Button
         variant="primary"
-        className="w-full justify-center mt-3"
+        className="w-full justify-center mt-4"
         disabled={!sprawdzenie.ok || trwa}
-        onClick={dolacz}
+        onClick={() => dolacz()}
       >
         {trwa ? "Sprawdzam…" : "Dołącz do gry"}
       </Button>
@@ -95,7 +108,7 @@ function Formularz() {
 
       <p className="text-[12px] text-[var(--text-faint)] leading-relaxed mt-3">
         Kod podaje prowadzący. Kody nie zawierają zera, litery O, jedynki, I ani L — jeśli widzisz
-        coś takiego, to na pewno inny znak.
+        coś takiego, to na pewno inny znak. Pola przyjmują też wklejony kod w całości.
       </p>
     </Card>
   );
@@ -127,10 +140,7 @@ export default function EkranGracza() {
               Wpisz kod, który podał prowadzący.
             </div>
           </div>
-          {/* useSearchParams wymaga granicy Suspense przy eksporcie statycznym. */}
-          <Suspense fallback={<Card>Wczytywanie…</Card>}>
-            <Formularz />
-          </Suspense>
+          <Formularz />
         </div>
       </div>
     </div>

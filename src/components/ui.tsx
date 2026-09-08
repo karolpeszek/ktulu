@@ -169,13 +169,16 @@ export function Toggle({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cx(
-        "ui-toggle flex items-center gap-2.5 text-[13px]",
+        // `text-left` jest konieczne: przeglądarka domyślnie centruje tekst
+        // w przycisku, więc dłuższa etykieta łamała się do środka.
+        "ui-toggle flex items-center gap-2.5 text-[13px] text-left",
         disabled && "opacity-40 pointer-events-none"
       )}
     >
       <span
         className={cx(
-          "ui-toggle-track w-9 h-5 rounded-full relative transition-colors border",
+          // `shrink-0`, żeby suwak nie zwężał się pod naporem długiej etykiety.
+          "ui-toggle-track shrink-0 w-9 h-5 rounded-full relative transition-colors border",
           checked
             ? "bg-[var(--accent)] border-[var(--accent)]"
             : "bg-[var(--surface-2)] border-[var(--border-strong)]"
@@ -189,7 +192,7 @@ export function Toggle({
           style={!checked ? { background: "var(--text-faint)" } : undefined}
         />
       </span>
-      <span>{label}</span>
+      <span className="leading-snug">{label}</span>
     </button>
   );
 }

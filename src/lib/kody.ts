@@ -11,7 +11,12 @@
  */
 export const ALFABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
-/** Prefiks kodu pokoju — od razu widać, czego dotyczy kartka na stole. */
+/**
+ * Dawny prefiks kodu pokoju. Kody są dziś gołymi czterema znakami, ale
+ * wpisanie „KTULU-AB3D” nadal działa — prefiks jest po prostu odcinany.
+ * Nie da się przy tym uszkodzić poprawnego kodu, bo litera L nie należy
+ * do alfabetu, więc żaden kod nie zaczyna się od tych znaków.
+ */
 export const PREFIKS_POKOJU = "KTULU";
 
 export const DLUGOSC_KODU_POKOJU = 4;
@@ -45,9 +50,9 @@ export function pogrupuj(znaki: string, grupa: number): string {
   return czesci.join("-");
 }
 
-/** KTULU-XXXX */
+/** Cztery znaki — tyle, ile da się przepisać z drugiego końca stołu. */
 export function losujKodPokoju(): string {
-  return `${PREFIKS_POKOJU}-${losujZnaki(DLUGOSC_KODU_POKOJU)}`;
+  return losujZnaki(DLUGOSC_KODU_POKOJU);
 }
 
 /** XXXX-XXXX-XXXX */
