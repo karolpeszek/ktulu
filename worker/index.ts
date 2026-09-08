@@ -10,6 +10,7 @@
 import { HASH_BOOTSTRAPU } from "./bootstrap.generated";
 import { Konfiguracja, originDozwolony, sprawdzKonfiguracje } from "./config";
 import { KontekstWebAuthn, Wynik } from "./konta";
+import { sprawdzKodPokoju } from "../src/lib/kody";
 import type { Env } from "./srodowisko";
 
 export { Konta } from "./konta";
@@ -157,6 +158,15 @@ async function obsluzApi(
   if (sciezka === "/api/auth/klucz/koniec" && post) {
     const dane = await czytajJson(request);
     return odpowiedz(await konta.dodanieKluczaKoniec(sesja, dane?.odpowiedz as never, kontekst));
+  }
+
+  // Sprawdzenie kodu przed dołączeniem — bez sesji, bo gracz jej nie ma.
+  const pokojMatch = sciezka.match(/^\/api\/pokoj\/([^/]+)$/);
+  if (pokojMatch && request.method === "GET") {
+    const sprawdzenie = sprawdzKodPokoju(decodeURIComponent(pokojMatch[1]));
+    if (!sprawdzenie.ok) return json({ error: sprawdzenie.powod }, 400);
+    const pokoj = env.POKOJE.getByName(sprawdzenie.kod);
+    return json(await pokoj.stan());
   }
 
   if (sciezka === "/api/admin/konta" && request.method === "GET") {

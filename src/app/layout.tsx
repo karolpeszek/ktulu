@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { GameProvider } from "@/lib/store";
+import { KontoProvider } from "@/lib/konto";
 import { PrefsProvider } from "@/lib/prefs";
-import AppShell from "@/components/AppShell";
 import UpdatePrompt from "@/components/UpdatePrompt";
 
 export const metadata: Metadata = {
-  title: "Ktulu · pulpit Manitou",
+  title: "Ktulu",
   description:
     "Aplikacja do prowadzenia rozgrywki w Ktulu — przydział ról, kroki nocy, głosowania i warunki zwycięstwa.",
   manifest: "/manifest.webmanifest",
@@ -49,11 +49,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
         <PrefsProvider>
-          <GameProvider>
-            <AppShell>{children}</AppShell>
-            <UpdatePrompt />
-          </GameProvider>
+          <KontoProvider>
+            {/* Pulpit Manitou dokłada własną ramkę w src/app/manitou/layout.tsx;
+                ekran gracza jest celowo bez nawigacji prowadzącego. */}
+            <GameProvider>{children}</GameProvider>
+          </KontoProvider>
         </PrefsProvider>
+        <UpdatePrompt />
       </body>
     </html>
   );

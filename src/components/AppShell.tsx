@@ -3,19 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useGame } from "@/lib/store";
+import { useKonto } from "@/lib/konto";
 import { cx, Badge } from "./ui";
 
 const NAV = [
-  { href: "/", label: "Przygotowanie" },
-  { href: "/gra", label: "Rozgrywka" },
-  { href: "/karty", label: "Karteczki" },
-  { href: "/zasady", label: "Zasady" },
-  { href: "/ustawienia", label: "Ustawienia" },
+  { href: "/manitou", label: "Przygotowanie" },
+  { href: "/manitou/gra", label: "Rozgrywka" },
+  { href: "/manitou/karty", label: "Karteczki" },
+  { href: "/manitou/zasady", label: "Zasady" },
+  { href: "/manitou/ustawienia", label: "Ustawienia" },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const { state, loaded } = useGame();
+  const { uzytkownik, trybLokalny } = useKonto();
 
   const phase =
     state.stage === "setup"
@@ -29,7 +31,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="app-header ui-header h-12 shrink-0 sticky top-0 z-30 bg-[var(--surface)] border-b border-[var(--border)] flex items-center px-4 gap-6">
-        <Link href="/" className="flex items-center gap-2 shrink-0">
+        <Link href="/manitou" className="flex items-center gap-2 shrink-0">
           <span className="w-5 h-5 rounded-[5px] bg-[var(--accent)] grid place-items-center text-[11px] font-bold text-[var(--accent-text)]">
             K
           </span>
@@ -59,6 +61,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <Link
+            href="/manitou/konto"
+            className={cx(
+              "text-[12.5px] px-2 py-1 rounded-[6px] hover:bg-[var(--surface-2)]",
+              path === "/manitou/konto" ? "text-[var(--text)]" : "text-[var(--text-dim)]"
+            )}
+            title={uzytkownik ? "Konto i klucze" : "Zaloguj się, żeby korzystać z lobby"}
+          >
+            {uzytkownik ? uzytkownik.nazwa : trybLokalny ? "Bez konta" : "Konto"}
+          </Link>
           {loaded && state.players.length > 0 && (
             <>
               <Badge>{`${state.players.filter((p) => p.alive).length} żywych`}</Badge>

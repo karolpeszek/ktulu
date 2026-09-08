@@ -112,7 +112,7 @@ export default function CardsPage() {
             ) : (
               <>
                 Rozdanie wydrukujesz po przydzieleniu kart w{" "}
-                <Link href="/" className="text-[var(--accent)] underline">
+                <Link href="/manitou" className="text-[var(--accent)] underline">
                   przygotowaniu gry
                 </Link>
                 .

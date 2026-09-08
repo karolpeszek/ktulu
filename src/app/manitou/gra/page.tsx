@@ -25,7 +25,7 @@ export default function GamePage() {
       <Card title="Brak rozgrywki">
         <Empty>
           Nie ma jeszcze rozdanych kart.{" "}
-          <Link href="/" className="text-[var(--accent)] underline">
+          <Link href="/manitou" className="text-[var(--accent)] underline">
             Przejdź do przygotowania gry
           </Link>
           .
@@ -49,7 +49,7 @@ export default function GamePage() {
           right={
             <div className="flex items-center gap-2">
             <Link
-              href="/karty"
+              href="/manitou/karty"
               className="h-7 px-2.5 inline-flex items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[12px]"
             >
               Karteczki
