@@ -45,3 +45,4 @@ next-env.d.ts
 
 # Lokalny stan `wrangler dev`
 .wrangler/
+worker/bootstrap.generated.ts

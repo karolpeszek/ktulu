@@ -5,7 +5,7 @@
   "packageManager": "pnpm@10.11.1",
   "scripts": {
     "dev": "next dev",
-    "build": "pnpm run verify && next build && node scripts/gen-sw.mjs",
+    "build": "node scripts/gen-bootstrap.mjs --force && pnpm run verify && next build && node scripts/gen-sw.mjs",
     "preview": "pnpm dlx serve out -l 4173",
     "dev:worker": "pnpm dlx wrangler dev",
     "deploy": "pnpm run build && pnpm dlx wrangler deploy",
@@ -14,10 +14,11 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "typecheck:worker": "tsc --noEmit -p worker/tsconfig.json",
-    "verify": "pnpm run lint && pnpm run typecheck && pnpm run typecheck:worker && pnpm run test",
-    "build:only": "next build && node scripts/gen-sw.mjs"
+    "verify": "node scripts/gen-bootstrap.mjs && pnpm run lint && pnpm run typecheck && pnpm run typecheck:worker && pnpm run test",
+    "build:only": "node scripts/gen-bootstrap.mjs --force && next build && node scripts/gen-sw.mjs"
   },
   "dependencies": {
+    "@simplewebauthn/server": "^14.0.1",
     "next": "16.3.3",
     "react": "19.2.8",
     "react-dom": "19.2.8"
