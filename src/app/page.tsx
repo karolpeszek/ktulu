@@ -114,7 +114,11 @@ function Formularz({ onWejscie }: { onWejscie: (kod: string) => void }) {
 
       <p className="text-[12px] text-[var(--text-faint)] leading-relaxed mt-3">
         Kod podaje prowadzący. Kody nie zawierają zera, litery O, jedynki, I ani L — jeśli widzisz
-        coś takiego, to na pewno inny znak. Pola przyjmują też wklejony kod w całości.
+        coś takiego, to na pewno inny znak. Pola przyjmują też wklejony kod w całości.{" "}
+        <Link href="/demo" className="text-[var(--accent)] underline">
+          Zobacz pokaz bez dołączania
+        </Link>
+        .
       </p>
     </Card>
   );
@@ -141,12 +145,20 @@ export default function EkranGracza() {
           </span>
           <span className="text-[13px] font-semibold tracking-tight">Ktulu</span>
         </div>
-        <Link
-          href="/manitou"
-          className="ml-auto text-[12.5px] text-[var(--text-dim)] hover:text-[var(--text)] underline"
-        >
-          Prowadzę grę
-        </Link>
+        <div className="ml-auto flex items-center gap-4">
+          <Link
+            href="/demo"
+            className="text-[12.5px] text-[var(--text-dim)] hover:text-[var(--text)] underline"
+          >
+            Zobacz pokaz
+          </Link>
+          <Link
+            href="/manitou"
+            className="text-[12.5px] text-[var(--text-dim)] hover:text-[var(--text)] underline"
+          >
+            Prowadzę grę
+          </Link>
+        </div>
       </header>
 
       <div className="flex-1 grid place-items-center p-4">
