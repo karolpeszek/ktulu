@@ -61,3 +61,21 @@ new_sqlite_classes = ["Konta"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Pokoj"]
+
+# Dzienniki Workera w panelu Cloudflare. Bez nich diagnoza problemu na
+# produkcji sprowadza się do zgadywania — kod błędu widzi użytkownik,
+# a my nie widzimy niczego.
+[observability.logs]
+enabled = true
+# Bez próbkowania: ruchu jest tyle, co przy jednym stole, więc nie ma czego
+# odsiewać, a zgubiony wpis to zwykle akurat ten, którego się szuka.
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+# Ślady wyłączone: przy jednym Workerze bez usług zależnych nie mają czego
+# pokazać poza tym, co już jest w dziennikach.
+[observability.traces]
+enabled = false
+head_sampling_rate = 1
+persist = true
