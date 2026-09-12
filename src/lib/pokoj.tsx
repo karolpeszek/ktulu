@@ -8,7 +8,15 @@
  * przy każdym odłożeniu urządzenia, a to zdarza się w trakcie zapisów ciągle.
  */
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { EtapPokoju } from "./lobby";
 
 export interface GraczWPokoju {
@@ -24,12 +32,42 @@ export interface GraczWPokoju {
   ujawniony: boolean;
 }
 
+export type PoziomAsysty = "odczyt" | "zapis";
+
+export interface Wspolprowadzacy {
+  uzytkownik: string;
+  nazwa: string;
+  poziom: PoziomAsysty;
+  dolaczyl: number;
+}
+
+export interface ZaproszenieAsysty {
+  kod: string;
+  poziom: PoziomAsysty;
+  wygasa: number;
+  zuzytePrzez: string | null;
+}
+
+/** Prośba asystenta czekająca na decyzję głównego prowadzącego. */
+export interface Zadanie {
+  id: string;
+  od: string;
+  odNazwa: string;
+  opis: string[];
+  utworzono: number;
+  bazowaWersja: number;
+}
+
 export interface StanPokoju {
   kod: string;
   etap: EtapPokoju;
   utworzono: number;
   wygasa: number;
   gracze: GraczWPokoju[];
+  wspolprowadzacy: Wspolprowadzacy[];
+  zaproszeniaAsysty: ZaproszenieAsysty[];
+  zadania: Zadanie[];
+  wersjaMigawki: number;
 }
 
 export type StanPolaczeniaPokoju = "rozlaczony" | "laczenie" | "polaczony";
@@ -134,6 +172,40 @@ export interface Pokoj {
   rozdaj: (przypisania: { gracz: string; rola: string }[]) => Promise<void>;
   nowaRunda: () => Promise<void>;
   ujawnij: (gracze: string[]) => Promise<void>;
+  zaproszenieAsysty: (poziom: PoziomAsysty) => Promise<string | null>;
+  cofnijZaproszenieAsysty: (kod: string) => Promise<void>;
+  odbierzAsyste: (uzytkownik: string) => Promise<void>;
+}
+
+/**
+ * Jeden pokój na cały pulpit.
+ *
+ * Podgląd na żywo to otwarte połączenie, więc trzyma go kontekst, a nie każdy
+ * ekran z osobna — inaczej przejście między przygotowaniem a rozgrywką
+ * zrywałoby je i otwierało od nowa.
+ */
+const PokojCtx = createContext<Pokoj | null>(null);
+
+export function PokojProvider({
+  aktywny,
+  children,
+}: {
+  aktywny: boolean;
+  children: React.ReactNode;
+}) {
+  const pokoj = usePokoj(aktywny);
+  return <PokojCtx.Provider value={pokoj}>{children}</PokojCtx.Provider>;
+}
+
+export function usePokojCtx(): Pokoj {
+  const c = useContext(PokojCtx);
+  if (!c) throw new Error("usePokojCtx poza PokojProvider");
+  return c;
+}
+
+/** Kod pokoju, w którym prowadzimy grę — bez otwierania połączenia. */
+export function kodProwadzonegoPokoju(): string | null {
+  return zapamietanyKod();
 }
 
 export function usePokoj(aktywny: boolean): Pokoj {
@@ -210,13 +282,13 @@ export function usePokoj(aktywny: boolean): Pokoj {
   }, [aktywny, kod]);
 
   const dzialaj = useCallback(
-    async (sciezka: string, cialo: unknown) => {
+    async (sciezka: string, cialo: unknown, metoda: "POST" | "DELETE" = "POST") => {
       if (!kod) return;
       setBlad(null);
       try {
         // Odpowiedź niesie świeży stan, więc nie czekamy na rozgłoszenie.
         setStan(await api<StanPokoju>(`/api/pokoj/${kod}${sciezka}`, {
-          method: "POST",
+          method: metoda,
           body: JSON.stringify(cialo),
         }));
       } catch (e) {
@@ -269,5 +341,24 @@ export function usePokoj(aktywny: boolean): Pokoj {
     rozdaj: (przypisania) => dzialaj("/rozdaj", { przypisania }),
     nowaRunda: () => dzialaj("/nowa-runda", {}),
     ujawnij: (gracze) => dzialaj("/ujawnij", { gracze }),
+    zaproszenieAsysty: async (poziom) => {
+      if (!kod) return null;
+      setBlad(null);
+      try {
+        // Odpowiedź niesie sam kod, więc świeży stan pokoju dociągamy osobno.
+        const wynik = await api<{ kod: string }>(`/api/pokoj/${kod}/asysta/zaproszenie`, {
+          method: "POST",
+          body: JSON.stringify({ poziom }),
+        });
+        setStan(await api<StanPokoju>(`/api/pokoj/${kod}/manitou`));
+        return wynik.kod;
+      } catch (e) {
+        setBlad((e as Error).message);
+        return null;
+      }
+    },
+    cofnijZaproszenieAsysty: (kodZaproszenia) =>
+      dzialaj("/asysta/zaproszenie", { kod: kodZaproszenia }, "DELETE"),
+    odbierzAsyste: (uzytkownik) => dzialaj("/asysta", { uzytkownik }, "DELETE"),
   };
 }

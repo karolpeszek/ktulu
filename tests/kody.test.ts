@@ -6,11 +6,14 @@ import {
   ALFABET,
   DLUGOSC_KODU_POKOJU,
   DLUGOSC_KODU_REJESTRACJI,
+  DLUGOSC_KODU_ASYSTY,
+  losujKodAsysty,
   losujKodPokoju,
   losujKodRejestracji,
   losujZnaki,
   pogrupuj,
   rdzenKodu,
+  sprawdzKodAsysty,
   sprawdzKodPokoju,
   sprawdzKodRejestracji,
 } from "../src/lib/kody";
@@ -53,6 +56,22 @@ describe("Format kodów", () => {
     assert.equal(w.ok && w.kod, "AB3D");
   });
 
+  it("kod asysty ma dwie grupy po cztery", () => {
+    assert.match(losujKodAsysty(), /^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/);
+  });
+
+  it("trzy rodzaje kodów różnią się długością, więc nie da się ich pomylić", () => {
+    // Kod gry wpuszcza do poczekalni, kod asysty daje wgląd we wszystkie karty,
+    // kod rejestracji zakłada konto. Pomyłka między nimi byłaby kosztowna.
+    const dlugosci = new Set([
+      rdzenKodu(losujKodPokoju()).length,
+      rdzenKodu(losujKodAsysty()).length,
+      rdzenKodu(losujKodRejestracji()).length,
+    ]);
+    assert.equal(dlugosci.size, 3, "każdy rodzaj kodu ma własną długość");
+    assert.equal(DLUGOSC_KODU_ASYSTY, 8);
+  });
+
   it("kod rejestracji ma trzy grupy po cztery", () => {
     const kod = losujKodRejestracji();
     assert.match(kod, /^[2-9A-HJKMNP-Z]{4}(-[2-9A-HJKMNP-Z]{4}){2}$/);
@@ -92,6 +111,7 @@ describe("Wpisywanie kodu", () => {
     for (let i = 0; i < 300; i++) {
       assert.equal(sprawdzKodPokoju(losujKodPokoju()).ok, true);
       assert.equal(sprawdzKodRejestracji(losujKodRejestracji()).ok, true);
+      assert.equal(sprawdzKodAsysty(losujKodAsysty()).ok, true);
     }
     assert.equal(DLUGOSC_KODU_POKOJU, 4);
   });

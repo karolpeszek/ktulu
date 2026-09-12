@@ -10,6 +10,7 @@ const NAV = [
   { href: "/manitou", label: "Przygotowanie" },
   { href: "/manitou/gra", label: "Rozgrywka" },
   { href: "/manitou/karty", label: "Karteczki" },
+  { href: "/manitou/asysta", label: "Asysta" },
   { href: "/manitou/zasady", label: "Zasady" },
   { href: "/manitou/ustawienia", label: "Ustawienia" },
 ];

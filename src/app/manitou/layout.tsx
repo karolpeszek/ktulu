@@ -11,13 +11,33 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import ProsbyAsysty, { usePublikacjaMigawki } from "@/components/ProsbyAsysty";
 import { useKonto } from "@/lib/konto";
+import { PokojProvider } from "@/lib/pokoj";
 
 /** Ekrany, na które trzeba wejść właśnie po to, żeby zdobyć dostęp. */
 const OTWARTE = ["/manitou/logowanie", "/manitou/rejestracja"];
 
+/**
+ * Ramka pulpitu prowadzącego: publikuje stan dla asysty i pokazuje jej prośby.
+ *
+ * Siedzi w układzie, a nie na pojedynczym ekranie, bo prośba może przyjść
+ * w dowolnej chwili — również wtedy, gdy akurat patrzymy na przygotowanie gry.
+ */
+function Pulpit({ children }: { children: React.ReactNode }) {
+  usePublikacjaMigawki();
+  return (
+    <AppShell>
+      <div className="flex flex-col gap-4">
+        <ProsbyAsysty />
+        {children}
+      </div>
+    </AppShell>
+  );
+}
+
 export default function ManitouLayout({ children }: { children: React.ReactNode }) {
-  const { uzytkownik, polaczenie, trybLokalny } = useKonto();
+  const { uzytkownik, polaczenie, trybLokalny, trybOnline } = useKonto();
   const sciezka = usePathname();
   const router = useRouter();
 
@@ -43,5 +63,9 @@ export default function ManitouLayout({ children }: { children: React.ReactNode 
   // Przekierowanie już leci — nie migamy zawartością pulpitu.
   if (!wolno) return null;
 
-  return <AppShell>{children}</AppShell>;
+  return (
+    <PokojProvider aktywny={trybOnline}>
+      <Pulpit>{children}</Pulpit>
+    </PokojProvider>
+  );
 }
