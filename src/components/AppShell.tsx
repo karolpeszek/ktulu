@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useGame } from "@/lib/store";
 import { useKonto } from "@/lib/konto";
-import { cx, Badge, Toggle, Tooltip } from "./ui";
+import { cx, Badge } from "./ui";
 
 const NAV = [
   { href: "/manitou", label: "Przygotowanie" },
@@ -18,7 +18,7 @@ const NAV = [
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const { state, loaded } = useGame();
-  const { uzytkownik, trybOnline, ustawTrybLokalny, polaczenie } = useKonto();
+  const { uzytkownik } = useKonto();
 
   const phase =
     state.stage === "setup"
@@ -62,27 +62,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          {/* Tryb online wymaga konta — bez niego przełącznik jest wyłączony,
-              a dymek mówi dlaczego, zamiast zostawiać martwy element. */}
-          <Tooltip
-            content={
-              uzytkownik
-                ? trybOnline
-                  ? "Gracze mogą dołączać kodem, karty rozdajesz na ich telefony."
-                  : "Gra tylko na tym urządzeniu — karteczki do druku, bez lobby."
-                : polaczenie === "online"
-                  ? "Wymaga zalogowania."
-                  : "Wymaga zalogowania i połączenia z serwerem."
-            }
-          >
-            <Toggle
-              checked={trybOnline}
-              disabled={!uzytkownik}
-              onChange={(v) => ustawTrybLokalny(!v)}
-              label="Tryb online"
-            />
-          </Tooltip>
-
           {uzytkownik ? (
             <Link
               href="/manitou/ustawienia"

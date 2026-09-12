@@ -36,7 +36,6 @@ import {
 import FactionDonut from "@/components/FactionDonut";
 import KartaLobby from "@/components/KartaLobby";
 import SeatArc, { SeatLegend } from "@/components/SeatArc";
-import { useKonto } from "@/lib/konto";
 import { GraczWPokoju, usePokojCtx } from "@/lib/pokoj";
 
 let idSeq = 0;
@@ -94,7 +93,6 @@ export default function SetupPage() {
 
   const players = state.players;
   const withJanosik = state.setup.withJanosik;
-  const { trybOnline } = useKonto();
   const pokoj = usePokojCtx();
 
   const janosikOk = janosikAllowed(players.length);
@@ -290,13 +288,7 @@ export default function SetupPage() {
       <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-4 items-start">
         {/* ── kolumna lewa ── */}
         <div className="flex flex-col gap-4">
-          {trybOnline && (
-            <KartaLobby
-              pokoj={pokoj}
-              posadzeni={players.map((p) => p.id)}
-              onPosadz={posadzZPuli}
-            />
-          )}
+          <KartaLobby pokoj={pokoj} posadzeni={players.map((p) => p.id)} onPosadz={posadzZPuli} />
 
           <Card
             title="Gracze"
