@@ -78,6 +78,7 @@ export default function StronaDemo() {
                 onPotwierdz={() => {
                   /* w pokazie nie ma komu potwierdzać */
                 }}
+                wspolnicy={dane.wspolnicy}
               />
               <KartyWGrze sklad={dane.sklad} ujawnieni={dane.ujawnieni} />
             </>

@@ -56,7 +56,18 @@ describe("Wspólnicy na karcie", () => {
     assert.deepEqual(wspolnicyDla(s, s.players[0].id), []);
   });
 
-  it("rozpoznanie dotyczy tylko wskazanych frakcji", () => {
-    assert.deepEqual(FRAKCJE_Z_ROZPOZNANIEM, ["bandyci", "indianie"]);
+  it("rozpoznają się wszystkie frakcje oprócz miasta", () => {
+    // Xięga, „Początek gry”: zerowej nocy „poznają się członkowie
+    // poszczególnych frakcji (oprócz miasta)”.
+    assert.equal(FRAKCJE_Z_ROZPOZNANIEM.includes("miasto"), false);
+    for (const f of ["bandyci", "indianie", "ufoki"] as const) {
+      assert.ok(FRAKCJE_Z_ROZPOZNANIEM.includes(f), `${f} powinny się poznawać`);
+    }
+  });
+
+  it("ufoki poznają swoich tak samo jak bandyci", () => {
+    const s = makeState(["wielki-ufol", "zielona-macka", "szeryf", "mieszczanin"]);
+    s.settings.wspolnicyNaKarcie = true;
+    assert.deepEqual(wspolnicyDla(s, s.players[0].id), [s.players[1].name]);
   });
 });

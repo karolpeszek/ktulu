@@ -62,6 +62,24 @@ describe("Demo ekranu gracza", () => {
     assert.equal(duzy.sklad.length, 18);
   });
 
+  it("wspólnicy, jeśli są, należą do tej samej frakcji i nie obejmują mnie", () => {
+    for (let i = 0; i < 100; i++) {
+      const d = wylosujDemo();
+      if (d.wspolnicy.length === 0) continue;
+      assert.equal(d.wspolnicy.includes(d.mojeImie), false, "własne imię wśród wspólników");
+      assert.equal(new Set(d.wspolnicy).size, d.wspolnicy.length, "powtórzone imię");
+      const moja = ROLE_BY_ID[d.mojaRola].faction;
+      assert.notEqual(moja, "miasto", "miasto nigdy nie poznaje swoich");
+    }
+  });
+
+  it("czasem pokazuje wspólników, a czasem nie", () => {
+    // Pokaz ma ilustrować oba warianty zasady domowej, nie jeden z nich.
+    const wyniki = Array.from({ length: 80 }, () => wylosujDemo().wspolnicy.length > 0);
+    assert.ok(wyniki.some(Boolean), "nigdy nie pokazał wspólników");
+    assert.ok(wyniki.some((x) => !x), "zawsze pokazywał wspólników");
+  });
+
   it("to samo ziarno daje to samo rozdanie", () => {
     // Dzięki temu ekran pokazu nie miga innym składem przy byle przerysowaniu.
     const a = wylosujDemo(generatorZiarna(0.42));

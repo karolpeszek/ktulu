@@ -1,15 +1,17 @@
-import { GameState, Faction } from "./types";
+import { FACTIONS, GameState, Faction } from "./types";
 import { ROLE_BY_ID } from "./roles";
 
 /**
  * Frakcje, których członkowie poznają się nawzajem.
  *
- * W Xiędze noc zerowa budzi z tym poleceniem bandytów, Indian i ufoków.
- * Na karcie umieszczamy na razie dwie pierwsze — taka była decyzja
- * prowadzącego, a nie własność zasad. Dopisanie "ufoki" wystarczy, żeby
- * zrównać kartę z tym, co dzieje się przy stole.
+ * Xięga stawia sprawę wprost w „Początku gry”: zerowej nocy „poznają się
+ * członkowie poszczególnych frakcji (oprócz miasta)”. Dlatego reguła jest
+ * tu wyrażona przez wykluczenie, a nie wyliczenie — nowa frakcja obejmie ją
+ * sama, a miasto nigdy, bo na jego niewiedzy stoi cała gra.
+ *
+ * Janosik jest sam w swojej frakcji, więc lista i tak wychodzi mu pusta.
  */
-export const FRAKCJE_Z_ROZPOZNANIEM: Faction[] = ["bandyci", "indianie"];
+export const FRAKCJE_Z_ROZPOZNANIEM: Faction[] = FACTIONS.filter((f) => f !== "miasto");
 
 /**
  * Kto jeszcze gra w tej samej drużynie, z punktu widzenia jednej osoby.

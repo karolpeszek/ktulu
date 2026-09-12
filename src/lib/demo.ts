@@ -1,5 +1,7 @@
 import { BOOK_FACTIONS } from "./types";
 import { buildPool, suggestedCounts } from "./setup";
+import { ROLE_BY_ID } from "./roles";
+import { FRAKCJE_Z_ROZPOZNANIEM } from "./wspolnicy";
 
 /**
  * Dane pokazowe dla ekranu gracza.
@@ -24,6 +26,11 @@ export interface DaneDemo {
   sklad: string[];
   /** Odkryci po śmierci: rola i imię. */
   ujawnieni: { rola: string; imie: string }[];
+  /**
+   * Wspólnicy z własnej frakcji — czasem pokazywani, czasem nie, bo w grze
+   * zależy to od zasady domowej. Pokaz ma pokazywać oba warianty.
+   */
+  wspolnicy: string[];
 }
 
 /** Liczba graczy mieszcząca się w tabeli Xięgi i typowa dla jednego stołu. */
@@ -50,7 +57,17 @@ export function wylosujDemo(losowa: () => number = Math.random): DaneDemo {
   const ilu = Math.floor(losowa() * Math.min(5, rozdanie.length - 1));
   const ujawnieni = rozdanie.slice(1, 1 + ilu).map((g) => ({ rola: g.rola, imie: g.imie }));
 
-  return { mojaRola: ja.rola, mojeImie: ja.imie, sklad, ujawnieni };
+  // Zasada domowa bywa włączona i wyłączona, więc pokaz losuje i to.
+  const zWspolnikami = losowa() < 0.5;
+  const mojaFrakcja = ROLE_BY_ID[ja.rola]?.faction;
+  const wspolnicy =
+    zWspolnikami && mojaFrakcja && FRAKCJE_Z_ROZPOZNANIEM.includes(mojaFrakcja)
+      ? rozdanie
+          .filter((g) => g.imie !== ja.imie && ROLE_BY_ID[g.rola]?.faction === mojaFrakcja)
+          .map((g) => g.imie)
+      : [];
+
+  return { mojaRola: ja.rola, mojeImie: ja.imie, sklad, ujawnieni, wspolnicy };
 }
 
 /**

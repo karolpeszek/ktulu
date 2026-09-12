@@ -658,7 +658,7 @@ export default function SetupPage() {
                     s.settings.wspolnicyNaKarcie = v;
                   })
                 }
-                label="Bandyci i Indianie widzą swoich wspólników na karcie w telefonie"
+                label="Frakcje poznają swoich na karcie w telefonie (oprócz miasta)"
               />
             </div>
           </Card>
