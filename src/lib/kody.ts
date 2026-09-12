@@ -20,6 +20,15 @@ export const ALFABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 export const PREFIKS_POKOJU = "KTULU";
 
 export const DLUGOSC_KODU_POKOJU = 4;
+/**
+ * Zaproszenie dla drugiego prowadzącego.
+ *
+ * Osiem znaków zamiast czterech, bo ten kod daje wgląd we wszystkie karty —
+ * inaczej niż kod gry, który wpuszcza tylko do poczekalni. Przy okazji długość
+ * jednoznacznie odróżnia oba kody: cztery znaki to gra, osiem to asysta,
+ * dwanaście to założenie konta. Nie da się pomylić jednego z drugim.
+ */
+export const DLUGOSC_KODU_ASYSTY = 8;
 export const DLUGOSC_KODU_REJESTRACJI = 12;
 
 /**
@@ -53,6 +62,11 @@ export function pogrupuj(znaki: string, grupa: number): string {
 /** Cztery znaki — tyle, ile da się przepisać z drugiego końca stołu. */
 export function losujKodPokoju(): string {
   return losujZnaki(DLUGOSC_KODU_POKOJU);
+}
+
+/** XXXX-XXXX */
+export function losujKodAsysty(): string {
+  return pogrupuj(losujZnaki(DLUGOSC_KODU_ASYSTY), 4);
 }
 
 /** XXXX-XXXX-XXXX */
@@ -100,4 +114,5 @@ export function sprawdzKod(surowy: string, dlugosc: number): WynikKodu {
 }
 
 export const sprawdzKodPokoju = (s: string) => sprawdzKod(s, DLUGOSC_KODU_POKOJU);
+export const sprawdzKodAsysty = (s: string) => sprawdzKod(s, DLUGOSC_KODU_ASYSTY);
 export const sprawdzKodRejestracji = (s: string) => sprawdzKod(s, DLUGOSC_KODU_REJESTRACJI);

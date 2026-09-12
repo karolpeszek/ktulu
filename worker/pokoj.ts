@@ -13,6 +13,7 @@
 import { DurableObject } from "cloudflare:workers";
 
 import { doBase64Url, sha256Hex } from "./bytes";
+import { losujKodAsysty, rdzenKodu } from "../src/lib/kody";
 import {
   EtapPokoju,
   WAZNOSC_POKOJU_MS,
@@ -44,6 +45,12 @@ export interface StanPokoju {
   utworzono: number;
   wygasa: number;
   gracze: GraczWPokoju[];
+  wspolprowadzacy: Wspolprowadzacy[];
+  zaproszeniaAsysty: ZaproszenieAsysty[];
+  /** Prośby czekające na decyzję głównego prowadzącego. */
+  zadania: Zadanie[];
+  /** Rośnie z każdym zapisem migawki — po niej asystent poznaje, że ma odświeżyć. */
+  wersjaMigawki: number;
 }
 
 /** To, co widzi gracz: własne dane i tyle o pokoju, ile mu potrzebne. */
@@ -67,6 +74,42 @@ export interface StanGracza {
   sklad: string[];
   /** Karty odkryte po śmierci: rola i imię, w kolejności ujawniania. */
   ujawnieni: { rola: string; imie: string }[];
+}
+
+/** Zakres uprawnień drugiego prowadzącego. */
+export type PoziomAsysty = "odczyt" | "zapis";
+
+export interface Wspolprowadzacy {
+  uzytkownik: string;
+  nazwa: string;
+  poziom: PoziomAsysty;
+  dolaczyl: number;
+}
+
+export interface ZaproszenieAsysty {
+  kod: string;
+  poziom: PoziomAsysty;
+  wygasa: number;
+  zuzytePrzez: string | null;
+}
+
+/**
+ * Prośba asystenta o zmianę stanu gry.
+ *
+ * Asystent liczy skutek u siebie tym samym silnikiem i przysyła gotowy stan,
+ * a nie opis akcji. Inaczej reguły gry musiałyby istnieć drugi raz, po stronie
+ * protokołu — a to jest dokładnie ten rodzaj powielenia, przez który dwie
+ * kopie zasad się rozjeżdżają.
+ */
+export interface Zadanie {
+  id: string;
+  od: string;
+  odNazwa: string;
+  /** Co się stanie, w słowach — wyprowadzone z dziennika gry. */
+  opis: string[];
+  utworzono: number;
+  /** Wersja migawki, na której asystent liczył. Starsza znaczy rozjazd. */
+  bazowaWersja: number;
 }
 
 export type Wynik<T> = { ok: true; dane: T } | { ok: false; powod: string; status: number };
@@ -126,6 +169,27 @@ export class Pokoj extends DurableObject<Env> {
         rola TEXT,
         widzial INTEGER,
         ujawniony INTEGER
+      );
+      CREATE TABLE IF NOT EXISTS wspolprowadzacy (
+        uzytkownik TEXT PRIMARY KEY,
+        nazwa TEXT NOT NULL,
+        poziom TEXT NOT NULL,
+        dolaczyl INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS zaproszenia_asysty (
+        kod TEXT PRIMARY KEY,
+        poziom TEXT NOT NULL,
+        wygasa INTEGER NOT NULL,
+        zuzyte_przez TEXT
+      );
+      CREATE TABLE IF NOT EXISTS zadania (
+        id TEXT PRIMARY KEY,
+        od TEXT NOT NULL,
+        od_nazwa TEXT NOT NULL,
+        opis TEXT NOT NULL,
+        stan TEXT NOT NULL,
+        bazowa_wersja INTEGER NOT NULL,
+        utworzono INTEGER NOT NULL
       );
     `);
 
@@ -222,6 +286,20 @@ export class Pokoj extends DurableObject<Env> {
       utworzono: Number(this.pole("utworzono") ?? 0),
       wygasa: Number(this.pole("wygasa") ?? 0),
       gracze: this.opiszGraczy(),
+      wspolprowadzacy: this.wspolprowadzacy(),
+      zaproszeniaAsysty: this.sql
+        .exec<{ kod: string; poziom: string; wygasa: number; zuzyte_przez: string | null }>(
+          "SELECT * FROM zaproszenia_asysty ORDER BY wygasa DESC"
+        )
+        .toArray()
+        .map((z) => ({
+          kod: z.kod,
+          poziom: z.poziom as PoziomAsysty,
+          wygasa: z.wygasa,
+          zuzytePrzez: z.zuzyte_przez,
+        })),
+      zadania: this.zadania(),
+      wersjaMigawki: this.wersjaMigawki(),
     };
   }
 
@@ -241,6 +319,59 @@ export class Pokoj extends DurableObject<Env> {
     return this.pole("wlasciciel") === uzytkownik;
   }
 
+  private wspolprowadzacy(): Wspolprowadzacy[] {
+    return this.sql
+      .exec<{ uzytkownik: string; nazwa: string; poziom: string; dolaczyl: number }>(
+        "SELECT * FROM wspolprowadzacy ORDER BY dolaczyl"
+      )
+      .toArray()
+      .map((w) => ({
+        uzytkownik: w.uzytkownik,
+        nazwa: w.nazwa,
+        poziom: w.poziom as PoziomAsysty,
+        dolaczyl: w.dolaczyl,
+      }));
+  }
+
+  /** Poziom dostępu użytkownika: właściciel ma zawsze pełny. */
+  private poziom(uzytkownik: string): PoziomAsysty | "wlasciciel" | null {
+    if (this.czyWlasciciel(uzytkownik)) return "wlasciciel";
+    const w = this.sql
+      .exec<{ poziom: string }>("SELECT poziom FROM wspolprowadzacy WHERE uzytkownik = ?", uzytkownik)
+      .toArray()[0];
+    return w ? (w.poziom as PoziomAsysty) : null;
+  }
+
+  /** Czy wolno choćby zaglądać — właściciel albo dowolny współprowadzący. */
+  private czyWidzi(uzytkownik: string): boolean {
+    return this.poziom(uzytkownik) !== null;
+  }
+
+  private zadania(): Zadanie[] {
+    return this.sql
+      .exec<{
+        id: string;
+        od: string;
+        od_nazwa: string;
+        opis: string;
+        bazowa_wersja: number;
+        utworzono: number;
+      }>("SELECT id, od, od_nazwa, opis, bazowa_wersja, utworzono FROM zadania ORDER BY utworzono")
+      .toArray()
+      .map((z) => ({
+        id: z.id,
+        od: z.od,
+        odNazwa: z.od_nazwa,
+        opis: JSON.parse(z.opis) as string[],
+        bazowaWersja: z.bazowa_wersja,
+        utworzono: z.utworzono,
+      }));
+  }
+
+  private wersjaMigawki(): number {
+    return Number(this.pole("wersjaMigawki") ?? 0);
+  }
+
   // ————————————————————————— odczyt —————————————————————————
 
   /** Czy pokój w ogóle istnieje — tyle wolno wiedzieć bez żadnego dostępu. */
@@ -252,8 +383,16 @@ export class Pokoj extends DurableObject<Env> {
 
   async stanDlaManitou(uzytkownik: string): Promise<Wynik<StanPokoju>> {
     if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
-    if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
+    if (!this.czyWidzi(uzytkownik)) return blad("Nie masz dostępu do tej gry.", 403);
     return { ok: true, dane: this.stanPelny() };
+  }
+
+  /** Czym dana osoba jest w tym pokoju — do rozstrzygnięcia, co jej pokazać. */
+  async mojaRola(
+    uzytkownik: string
+  ): Promise<Wynik<{ poziom: PoziomAsysty | "wlasciciel" | null; kod: string }>> {
+    if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
+    return { ok: true, dane: { poziom: this.poziom(uzytkownik), kod: this.pole("kod") ?? "" } };
   }
 
   // ————————————————————————— zakładanie —————————————————————————
@@ -505,6 +644,8 @@ export class Pokoj extends DurableObject<Env> {
     if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
     if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
     this.sql.exec("UPDATE gracze SET rola = NULL, widzial = NULL, ujawniony = NULL");
+    // Prośby dotyczyły zakończonej partii i po niej nie mają sensu.
+    this.sql.exec("DELETE FROM zadania");
     this.ustaw("etap", "zamkniete");
     // Doba liczy się od nowa — nowa rozgrywka to nowy wieczór.
     const wygasa = Date.now() + WAZNOSC_POKOJU_MS;
@@ -512,6 +653,198 @@ export class Pokoj extends DurableObject<Env> {
     await this.ctx.storage.setAlarm(wygasa);
     this.rozeslij();
     return { ok: true, dane: this.stanPelny() };
+  }
+
+
+  // ————————————————————— drugi prowadzący —————————————————————
+
+  /**
+   * Wystawia kod zaproszenia dla drugiego prowadzącego.
+   *
+   * Kod jest inny niż ten do gry i dłuższy, bo daje wgląd we wszystkie karty,
+   * a nie tylko wstęp do poczekalni.
+   */
+  async zaproszenieAsysty(
+    uzytkownik: string,
+    poziom: PoziomAsysty
+  ): Promise<Wynik<{ kod: string; wygasa: number }>> {
+    if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
+    if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
+    if (poziom !== "odczyt" && poziom !== "zapis") return blad("Nieznany poziom dostępu.");
+
+    const kod = losujKodAsysty();
+    const wygasa = Date.now() + WAZNOSC_POKOJU_MS;
+    this.sql.exec(
+      "INSERT INTO zaproszenia_asysty (kod, poziom, wygasa) VALUES (?, ?, ?)",
+      rdzenKodu(kod),
+      poziom,
+      wygasa
+    );
+    this.rozeslij();
+    return { ok: true, dane: { kod, wygasa } };
+  }
+
+  async cofnijZaproszenieAsysty(uzytkownik: string, kod: string): Promise<Wynik<StanPokoju>> {
+    if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
+    this.sql.exec(
+      "DELETE FROM zaproszenia_asysty WHERE kod = ? AND zuzyte_przez IS NULL",
+      rdzenKodu(kod)
+    );
+    this.rozeslij();
+    return { ok: true, dane: this.stanPelny() };
+  }
+
+  /** Dołącza drugiego prowadzącego na podstawie kodu. */
+  async dolaczJakoAsysta(
+    uzytkownik: string,
+    nazwa: string,
+    kod: string
+  ): Promise<Wynik<{ poziom: PoziomAsysty }>> {
+    if (!this.zalozony()) return blad("Nie ma gry o tym kodzie.", 404);
+    if (this.czyWlasciciel(uzytkownik)) return blad("To twoja własna gra.", 409);
+
+    const juz = this.sql
+      .exec<{ poziom: string }>("SELECT poziom FROM wspolprowadzacy WHERE uzytkownik = ?", uzytkownik)
+      .toArray()[0];
+    // Powrót po odświeżeniu nie jest nowym dołączeniem i nie zużywa kodu.
+    if (juz) return { ok: true, dane: { poziom: juz.poziom as PoziomAsysty } };
+
+    const z = this.sql
+      .exec<{ poziom: string; wygasa: number; zuzyte_przez: string | null }>(
+        "SELECT poziom, wygasa, zuzyte_przez FROM zaproszenia_asysty WHERE kod = ?",
+        rdzenKodu(kod)
+      )
+      .toArray()[0];
+    if (!z) return blad("Nie ma takiego zaproszenia.", 403);
+    if (z.zuzyte_przez) return blad("To zaproszenie zostało już wykorzystane.", 403);
+    if (z.wygasa < Date.now()) return blad("To zaproszenie straciło ważność.", 403);
+
+    const teraz = Date.now();
+    this.sql.exec(
+      "INSERT INTO wspolprowadzacy (uzytkownik, nazwa, poziom, dolaczyl) VALUES (?, ?, ?, ?)",
+      uzytkownik,
+      nazwa,
+      z.poziom,
+      teraz
+    );
+    this.sql.exec(
+      "UPDATE zaproszenia_asysty SET zuzyte_przez = ? WHERE kod = ?",
+      uzytkownik,
+      rdzenKodu(kod)
+    );
+    this.rozeslij();
+    return { ok: true, dane: { poziom: z.poziom as PoziomAsysty } };
+  }
+
+  async odbierzAsyste(uzytkownik: string, komu: string): Promise<Wynik<StanPokoju>> {
+    if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
+    this.sql.exec("DELETE FROM wspolprowadzacy WHERE uzytkownik = ?", komu);
+    this.sql.exec("DELETE FROM zadania WHERE od = ?", komu);
+    this.rozeslij();
+    return { ok: true, dane: this.stanPelny() };
+  }
+
+  // ————————————————————— migawka stanu gry —————————————————————
+
+  /**
+   * Zapisuje stan gry do wglądu dla asysty.
+   *
+   * Wolno to wyłącznie właścicielowi: jego urządzenie trzyma stan i jest
+   * jedynym miejscem, w którym gra naprawdę się toczy. Pokój tylko powiela
+   * ten stan dalej.
+   */
+  async zapiszMigawke(uzytkownik: string, stan: unknown): Promise<Wynik<{ wersja: number }>> {
+    if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
+    if (!this.czyWlasciciel(uzytkownik)) return blad("Stan zapisuje tylko główny prowadzący.", 403);
+
+    const wersja = this.wersjaMigawki() + 1;
+    this.ustaw("migawka", JSON.stringify(stan));
+    this.ustaw("wersjaMigawki", String(wersja));
+    this.ustaw("migawkaKiedy", String(Date.now()));
+    this.rozeslij();
+    return { ok: true, dane: { wersja } };
+  }
+
+  async pobierzMigawke(
+    uzytkownik: string
+  ): Promise<Wynik<{ wersja: number; kiedy: number; stan: unknown | null }>> {
+    if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
+    if (!this.czyWidzi(uzytkownik)) return blad("Nie masz dostępu do tej gry.", 403);
+    const surowa = this.pole("migawka");
+    return {
+      ok: true,
+      dane: {
+        wersja: this.wersjaMigawki(),
+        kiedy: Number(this.pole("migawkaKiedy") ?? 0),
+        stan: surowa ? (JSON.parse(surowa) as unknown) : null,
+      },
+    };
+  }
+
+  // ————————————————————— prośby asysty —————————————————————
+
+  /**
+   * Przyjmuje prośbę o zmianę stanu. Sama niczego nie zmienia — dopóki główny
+   * prowadzący jej nie zatwierdzi, obowiązuje dotychczasowa migawka.
+   */
+  async zglosZadanie(
+    uzytkownik: string,
+    opis: string[],
+    stan: unknown,
+    bazowaWersja: number
+  ): Promise<Wynik<{ id: string }>> {
+    if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
+    const poziom = this.poziom(uzytkownik);
+    if (poziom === null) return blad("Nie masz dostępu do tej gry.", 403);
+    if (poziom === "odczyt") return blad("Masz dostęp tylko do podglądu.", 403);
+    if (poziom === "wlasciciel") return blad("Główny prowadzący zmienia stan wprost.", 409);
+
+    const ja = this.sql
+      .exec<{ nazwa: string }>("SELECT nazwa FROM wspolprowadzacy WHERE uzytkownik = ?", uzytkownik)
+      .toArray()[0];
+
+    const id = doBase64Url(crypto.getRandomValues(new Uint8Array(8)));
+    this.sql.exec(
+      `INSERT INTO zadania (id, od, od_nazwa, opis, stan, bazowa_wersja, utworzono)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      id,
+      uzytkownik,
+      ja?.nazwa ?? "asysta",
+      JSON.stringify(opis.slice(0, 40)),
+      JSON.stringify(stan),
+      bazowaWersja,
+      Date.now()
+    );
+    this.rozeslij();
+    return { ok: true, dane: { id } };
+  }
+
+  /** Zwraca stan zaproponowany przez asystenta, żeby główny mógł go przyjąć. */
+  async trescZadania(uzytkownik: string, id: string): Promise<Wynik<{ stan: unknown; bazowaWersja: number }>> {
+    if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
+    const z = this.sql
+      .exec<{ stan: string; bazowa_wersja: number }>(
+        "SELECT stan, bazowa_wersja FROM zadania WHERE id = ?",
+        id
+      )
+      .toArray()[0];
+    if (!z) return blad("Tej prośby już nie ma.", 404);
+    return { ok: true, dane: { stan: JSON.parse(z.stan), bazowaWersja: z.bazowa_wersja } };
+  }
+
+  /** Zdejmuje prośbę z kolejki — po przyjęciu albo odrzuceniu. */
+  async zamknijZadanie(uzytkownik: string, id: string): Promise<Wynik<StanPokoju>> {
+    if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
+    this.sql.exec("DELETE FROM zadania WHERE id = ?", id);
+    this.rozeslij();
+    return { ok: true, dane: this.stanPelny() };
+  }
+
+  /** Asystent może wycofać własną prośbę, dopóki nikt jej nie rozstrzygnął. */
+  async wycofajZadanie(uzytkownik: string, id: string): Promise<Wynik<null>> {
+    this.sql.exec("DELETE FROM zadania WHERE id = ? AND od = ?", id, uzytkownik);
+    this.rozeslij();
+    return { ok: true, dane: null };
   }
 
   // ————————————————————————— WebSocket —————————————————————————
@@ -532,8 +865,10 @@ export class Pokoj extends DurableObject<Env> {
     }
     const uzytkownik = request.headers.get("x-ktulu-uzytkownik") ?? "";
     if (!this.zalozony()) return new Response("Ten pokój nie istnieje.", { status: 404 });
-    if (!this.czyWlasciciel(uzytkownik)) {
-      return new Response("To nie jest twój pokój.", { status: 403 });
+    // Współprowadzący też patrzą na żywo — bez tego asysta nie wiedziałaby,
+    // że stan się zmienił, dopóki sama o to nie zapyta.
+    if (!this.czyWidzi(uzytkownik)) {
+      return new Response("Nie masz dostępu do tej gry.", { status: 403 });
     }
 
     const para = new WebSocketPair();

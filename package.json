@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "node scripts/gen-bootstrap.mjs --force && pnpm run verify && next build && node scripts/gen-sw.mjs",
     "preview": "pnpm dlx serve out -l 4173",
-    "dev:worker": "pnpm dlx wrangler dev",
+    "dev:worker": "wrangler dev",
     "deploy": "pnpm run build && pnpm dlx wrangler deploy",
     "deploy:podglad": "npx wrangler versions upload --preview-alias $(node scripts/alias-podgladu.mjs)",
     "icons": "node scripts/gen-icons.mjs",
@@ -28,7 +28,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260908.1",
+    "@cloudflare/workers-types": "^5.20260911.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -37,11 +37,13 @@
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.131.0"
   },
   "pnpm": {
-    "ignoredBuiltDependencies": [
-      "unrs-resolver"
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd"
     ]
   }
 }

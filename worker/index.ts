@@ -218,7 +218,7 @@ async function obsluzApi(
     return json({ error: "Nie udało się wylosować wolnego kodu. Spróbuj jeszcze raz." }, 503);
   }
 
-  const pokojMatch = sciezka.match(/^\/api\/pokoj\/([^/]+)(\/[a-z-]+)?$/);
+  const pokojMatch = sciezka.match(/^\/api\/pokoj\/([^/]+)((?:\/[a-z-]+){0,2})?$/);
   if (pokojMatch) {
     const cel = zKodem(pokojMatch[1]);
     if (!cel) {
@@ -296,6 +296,70 @@ async function obsluzApi(
         .filter((x) => typeof x.gracz === "string" && typeof x.rola === "string")
         .map((x) => ({ gracz: x.gracz as string, rola: x.rola as string }));
       return odpowiedz(await pokoj.rozdaj(ja.id, przypisania));
+    }
+
+    // ——— drugi prowadzący ———
+
+    if (koncowka === "/moja-rola" && request.method === "GET") {
+      return odpowiedz(await pokoj.mojaRola(ja.id));
+    }
+
+    if (koncowka === "/asysta/dolacz" && post) {
+      const dane = await czytajJson(request);
+      return odpowiedz(await pokoj.dolaczJakoAsysta(ja.id, ja.nazwa, tekst(dane, "kod")));
+    }
+
+    if (koncowka === "/asysta/zaproszenie" && post) {
+      const dane = await czytajJson(request);
+      const poziom = tekst(dane, "poziom") === "zapis" ? "zapis" : "odczyt";
+      return odpowiedz(await pokoj.zaproszenieAsysty(ja.id, poziom));
+    }
+
+    if (koncowka === "/asysta/zaproszenie" && request.method === "DELETE") {
+      const dane = await czytajJson(request);
+      return odpowiedz(await pokoj.cofnijZaproszenieAsysty(ja.id, tekst(dane, "kod")));
+    }
+
+    if (koncowka === "/asysta" && request.method === "DELETE") {
+      const dane = await czytajJson(request);
+      return odpowiedz(await pokoj.odbierzAsyste(ja.id, tekst(dane, "uzytkownik")));
+    }
+
+    // ——— migawka stanu gry ———
+
+    if (koncowka === "/migawka" && request.method === "GET") {
+      return odpowiedz(await pokoj.pobierzMigawke(ja.id));
+    }
+
+    if (koncowka === "/migawka" && post) {
+      const dane = await czytajJson(request);
+      return odpowiedz(await pokoj.zapiszMigawke(ja.id, dane?.stan));
+    }
+
+    // ——— prośby asysty ———
+
+    if (koncowka === "/zadanie" && post) {
+      const dane = await czytajJson(request);
+      const opis = Array.isArray(dane?.opis)
+        ? (dane.opis as unknown[]).filter((x): x is string => typeof x === "string")
+        : [];
+      const bazowa = typeof dane?.bazowaWersja === "number" ? dane.bazowaWersja : 0;
+      return odpowiedz(await pokoj.zglosZadanie(ja.id, opis, dane?.stan, bazowa));
+    }
+
+    if (koncowka === "/zadanie/tresc" && request.method === "GET") {
+      const id = url.searchParams.get("id") ?? "";
+      return odpowiedz(await pokoj.trescZadania(ja.id, id));
+    }
+
+    if (koncowka === "/zadanie" && request.method === "DELETE") {
+      const dane = await czytajJson(request);
+      return odpowiedz(await pokoj.zamknijZadanie(ja.id, tekst(dane, "id")));
+    }
+
+    if (koncowka === "/zadanie/wycofaj" && post) {
+      const dane = await czytajJson(request);
+      return odpowiedz(await pokoj.wycofajZadanie(ja.id, tekst(dane, "id")));
     }
 
     if (koncowka === "/ujawnij" && post) {

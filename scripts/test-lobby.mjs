@@ -45,6 +45,30 @@ async function zapytaj(sciezka, opcje = {}) {
   return { status: odp.status, tresc };
 }
 
+/** Żądanie w cudzej sesji — do sprawdzania, co widzi drugi prowadzący. */
+async function zapytajJako(ciastkoSesji, sciezka, opcje = {}) {
+  const odp = await fetch(BAZA + sciezka, {
+    ...opcje,
+    headers: {
+      origin: ORIGIN,
+      "content-type": "application/json",
+      cookie: ciastkoSesji,
+      ...(opcje.headers ?? {}),
+    },
+  });
+  return { status: odp.status, tresc: await odp.json().catch(() => ({})) };
+}
+
+/** Zakłada sesję i zwraca samo ciasteczko, nie ruszając bieżącej. */
+async function osobnaSesja(nazwa) {
+  const odp = await fetch(BAZA + "/api/test/sesja", {
+    method: "POST",
+    headers: { origin: ORIGIN, "content-type": "application/json" },
+    body: JSON.stringify({ nazwa }),
+  });
+  return (odp.headers.get("set-cookie") ?? "").split(";")[0];
+}
+
 const dolacz = (kod, token, nazwa) =>
   zapytaj(`/api/pokoj/${kod}/dolacz`, {
     method: "POST",
@@ -289,6 +313,120 @@ sprawdz(bezMarka.tresc.gracze?.length === 1, "prowadzący wyrzuca gracza");
   sprawdz(poNowej.tresc.ja?.nazwa === "Kasia", "gracz nie musi wpisywać imienia od nowa");
   sprawdz(poNowej.tresc.sklad?.length === 0, "skład poprzedniej gry znika");
   sprawdz(poNowej.tresc.ujawnieni?.length === 0, "odkrycia poprzedniej gry znikają");
+}
+
+// — drugi prowadzący —
+{
+  const asystent = await osobnaSesja("TestowyAsystent");
+  const podgladacz = await osobnaSesja("TestowyPodgladacz");
+
+  const bezZaproszenia = await zapytajJako(asystent, `/api/pokoj/${kod}/manitou`);
+  sprawdz(bezZaproszenia.status === 403, "bez zaproszenia nie ma wglądu w grę");
+
+  const zapZapis = await zapytaj(`/api/pokoj/${kod}/asysta/zaproszenie`, {
+    method: "POST",
+    body: JSON.stringify({ poziom: "zapis" }),
+  });
+  sprawdz(zapZapis.status === 200, "prowadzący wystawia zaproszenie do asysty");
+  const kodAsysty = zapZapis.tresc.kod;
+  sprawdz(
+    /^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/.test(kodAsysty ?? ""),
+    "kod asysty ma osiem znaków, inaczej niż czteroznakowy kod gry",
+    kodAsysty
+  );
+  sprawdz(kodAsysty.replace("-", "").length !== kod.length, "kodu asysty nie da się pomylić z kodem gry");
+
+  const zapOdczyt = await zapytaj(`/api/pokoj/${kod}/asysta/zaproszenie`, {
+    method: "POST",
+    body: JSON.stringify({ poziom: "odczyt" }),
+  });
+
+  const dolaczony = await zapytajJako(asystent, `/api/pokoj/${kod}/asysta/dolacz`, {
+    method: "POST",
+    body: JSON.stringify({ kod: kodAsysty }),
+  });
+  sprawdz(dolaczony.tresc.poziom === "zapis", "asystent dołącza z prawem zapisu");
+
+  const ponownie = await zapytajJako(asystent, `/api/pokoj/${kod}/asysta/dolacz`, {
+    method: "POST",
+    body: JSON.stringify({ kod: kodAsysty }),
+  });
+  sprawdz(ponownie.status === 200, "powrót po odświeżeniu nie wymaga nowego kodu");
+
+  const zuzyty = await zapytajJako(podgladacz, `/api/pokoj/${kod}/asysta/dolacz`, {
+    method: "POST",
+    body: JSON.stringify({ kod: kodAsysty }),
+  });
+  sprawdz(zuzyty.status === 403, "zużytego zaproszenia nie da się użyć drugi raz");
+
+  await zapytajJako(podgladacz, `/api/pokoj/${kod}/asysta/dolacz`, {
+    method: "POST",
+    body: JSON.stringify({ kod: zapOdczyt.tresc.kod }),
+  });
+
+  // — migawka stanu —
+  const zapisana = await zapytaj(`/api/pokoj/${kod}/migawka`, {
+    method: "POST",
+    body: JSON.stringify({ stan: { stage: "night", night: 1 } }),
+  });
+  sprawdz(zapisana.tresc.wersja === 1, "główny prowadzący zapisuje migawkę");
+
+  const uAsystenta = await zapytajJako(asystent, `/api/pokoj/${kod}/migawka`);
+  sprawdz(uAsystenta.tresc.stan?.night === 1, "asystent widzi stan gry");
+
+  const proba = await zapytajJako(asystent, `/api/pokoj/${kod}/migawka`, {
+    method: "POST",
+    body: JSON.stringify({ stan: { podmieniony: true } }),
+  });
+  sprawdz(proba.status === 403, "asystent nie może nadpisać stanu wprost");
+
+  // — prośby o zmianę —
+  const odPodgladu = await zapytajJako(podgladacz, `/api/pokoj/${kod}/zadanie`, {
+    method: "POST",
+    body: JSON.stringify({ opis: ["cokolwiek"], stan: { night: 9 }, bazowaWersja: 1 }),
+  });
+  sprawdz(odPodgladu.status === 403, "poziom tylko do odczytu nie zgłasza zmian");
+
+  const prosba = await zapytajJako(asystent, `/api/pokoj/${kod}/zadanie`, {
+    method: "POST",
+    body: JSON.stringify({ opis: ["Zabito Marka"], stan: { night: 2 }, bazowaWersja: 1 }),
+  });
+  sprawdz(prosba.status === 200, "asystent zgłasza prośbę o zmianę");
+
+  const poZgloszeniu = await zapytajJako(asystent, `/api/pokoj/${kod}/migawka`);
+  sprawdz(
+    poZgloszeniu.tresc.stan?.night === 1 && poZgloszeniu.tresc.wersja === 1,
+    "sama prośba niczego nie zmienia — stan czeka na zatwierdzenie"
+  );
+
+  const kolejka = await zapytaj(`/api/pokoj/${kod}/manitou`);
+  sprawdz(kolejka.tresc.zadania?.length === 1, "prośba stoi w kolejce u głównego");
+  sprawdz(kolejka.tresc.zadania?.[0]?.opis?.[0] === "Zabito Marka", "kolejka niesie opis zmiany");
+
+  const cudzaTresc = await zapytajJako(asystent, `/api/pokoj/${kod}/zadanie/tresc?id=${prosba.tresc.id}`);
+  sprawdz(cudzaTresc.status === 403, "treść prośby czyta tylko główny prowadzący");
+
+  const tresc = await zapytaj(`/api/pokoj/${kod}/zadanie/tresc?id=${prosba.tresc.id}`);
+  sprawdz(tresc.tresc.stan?.night === 2, "główny pobiera proponowany stan");
+  sprawdz(tresc.tresc.bazowaWersja === 1, "prośba niesie wersję, na której liczono");
+
+  const zamkniete = await zapytaj(`/api/pokoj/${kod}/zadanie`, {
+    method: "DELETE",
+    body: JSON.stringify({ id: prosba.tresc.id }),
+  });
+  sprawdz(zamkniete.tresc.zadania?.length === 0, "rozstrzygnięta prośba znika z kolejki");
+
+  // — odebranie dostępu —
+  const bezAsysty = await zapytaj(`/api/pokoj/${kod}/asysta`, {
+    method: "DELETE",
+    body: JSON.stringify({ uzytkownik: dolaczony.tresc.uzytkownik ?? (await zapytaj(`/api/pokoj/${kod}/manitou`)).tresc.wspolprowadzacy.find((w) => w.nazwa === "TestowyAsystent")?.uzytkownik }),
+  });
+  sprawdz(
+    !bezAsysty.tresc.wspolprowadzacy?.some((w) => w.nazwa === "TestowyAsystent"),
+    "prowadzący odbiera dostęp asystentowi"
+  );
+  const poOdebraniu = await zapytajJako(asystent, `/api/pokoj/${kod}/migawka`);
+  sprawdz(poOdebraniu.status === 403, "po odebraniu dostępu asystent nie widzi już stanu");
 }
 
 // — cudzy pokój —
