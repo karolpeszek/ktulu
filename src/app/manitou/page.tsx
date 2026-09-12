@@ -21,6 +21,7 @@ import {
 } from "@/lib/setup";
 import { firstIndex } from "@/lib/resolve";
 import { zachowajSklad } from "@/lib/nowaGra";
+import { wspolnicyDla } from "@/lib/wspolnicy";
 import {
   Badge,
   Button,
@@ -217,7 +218,12 @@ export default function SetupPage() {
   const wydajKarty = async () => {
     const przypisania = players
       .filter((p) => p.roleId)
-      .map((p) => ({ gracz: p.id, rola: p.roleId! }));
+      .map((p) => ({
+        gracz: p.id,
+        rola: p.roleId!,
+        // Listę liczymy tutaj, bo tylko to urządzenie zna cudze karty.
+        wspolnicy: wspolnicyDla(state, p.id),
+      }));
     await pokoj.rozdaj(przypisania);
   };
 
@@ -644,6 +650,15 @@ export default function SetupPage() {
                   })
                 }
                 label="Teatrzyk: budź nieaktywną postać mimo pominięcia jej akcji"
+              />
+              <Toggle
+                checked={state.settings.wspolnicyNaKarcie}
+                onChange={(v) =>
+                  update((s) => {
+                    s.settings.wspolnicyNaKarcie = v;
+                  })
+                }
+                label="Bandyci i Indianie widzą swoich wspólników na karcie w telefonie"
               />
             </div>
           </Card>

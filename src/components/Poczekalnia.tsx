@@ -25,6 +25,7 @@ interface StanGracza {
     miejsce: number | null;
     rola: string | null;
     widzial: number | null;
+    wspolnicy: string[];
   } | null;
   imiona: string[];
   sklad: string[];
@@ -191,6 +192,7 @@ export default function Poczekalnia({ kod, wyjdz }: { kod: string; wyjdz: () => 
             imie={stan!.ja!.nazwa}
             potwierdzone={stan!.ja!.widzial !== null}
             onPotwierdz={() => void potwierdz()}
+            wspolnicy={stan!.ja!.wspolnicy ?? []}
           />
           <KartyWGrze sklad={stan!.sklad} ujawnieni={stan!.ujawnieni} />
         </>

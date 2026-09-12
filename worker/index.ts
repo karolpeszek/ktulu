@@ -292,9 +292,15 @@ async function obsluzApi(
       const dane = await czytajJson(request);
       const surowe = Array.isArray(dane?.przypisania) ? dane.przypisania : [];
       const przypisania = surowe
-        .map((x) => x as { gracz?: unknown; rola?: unknown })
+        .map((x) => x as { gracz?: unknown; rola?: unknown; wspolnicy?: unknown })
         .filter((x) => typeof x.gracz === "string" && typeof x.rola === "string")
-        .map((x) => ({ gracz: x.gracz as string, rola: x.rola as string }));
+        .map((x) => ({
+          gracz: x.gracz as string,
+          rola: x.rola as string,
+          wspolnicy: Array.isArray(x.wspolnicy)
+            ? (x.wspolnicy as unknown[]).filter((n): n is string => typeof n === "string")
+            : [],
+        }));
       return odpowiedz(await pokoj.rozdaj(ja.id, przypisania));
     }
 

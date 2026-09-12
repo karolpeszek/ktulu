@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS: Settings = {
   banditsCanKill: false,
   disclosure: "tajny",
   wakeInactiveForShow: true,
+  wspolnicyNaKarcie: false,
 };
 
 export function emptyState(): GameState {

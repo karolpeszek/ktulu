@@ -429,6 +429,69 @@ sprawdz(bezMarka.tresc.gracze?.length === 1, "prowadzący wyrzuca gracza");
   sprawdz(poOdebraniu.status === 403, "po odebraniu dostępu asystent nie widzi już stanu");
 }
 
+// — wspólnicy na karcie —
+  {
+    // Blok dokłada własnego gracza, żeby lista wspólników miała kogo zawierać,
+    // i sprząta po sobie — dalsze sprawdzenia liczą na zastanym składzie.
+    // Po rozdaniu zapisy są zamknięte — nowa runda przywraca możliwość
+    // dołączenia, a że to ostatni blok, nie zaburza niczyich założeń.
+    await zapytaj(`/api/pokoj/${kod}/nowa-runda`, { method: "POST" });
+    await zapytaj(`/api/pokoj/${kod}/etap`, {
+      method: "POST",
+      body: JSON.stringify({ etap: "lobby" }),
+    });
+    await dolacz(kod, "token-wspolnika", "Bogdan");
+    const wszyscy = (await zapytaj(`/api/pokoj/${kod}/manitou`)).tresc.gracze;
+    sprawdz(wszyscy.length >= 2, "do sprawdzenia wspólników potrzeba dwóch osób");
+
+    await zapytaj(`/api/pokoj/${kod}/rozdaj`, {
+      method: "POST",
+      body: JSON.stringify({
+        przypisania: wszyscy.map((g, i) => ({
+          gracz: g.id,
+          rola: i === 0 ? "herszt" : "bandyta",
+          // Listę liczy prowadzący; pokój ma ją wyłącznie przekazać dalej.
+          wspolnicy: wszyscy.filter((x) => x.id !== g.id).map((x) => x.nazwa),
+        })),
+      }),
+    });
+
+    const moja = await zapytaj(`/api/pokoj/${kod}/ja`, {
+      headers: { "x-ktulu-gracz": "token-kasi" },
+    });
+    sprawdz(
+      moja.tresc.ja?.wspolnicy?.includes("Bogdan"),
+      "gracz widzi wspólnika na własnej karcie",
+      JSON.stringify(moja.tresc.ja?.wspolnicy)
+    );
+    sprawdz(
+      !moja.tresc.ja.wspolnicy.includes(moja.tresc.ja.nazwa),
+      "wśród wspólników nie ma samego zainteresowanego"
+    );
+
+    const obcy = await zapytaj(`/api/pokoj/${kod}/ja`, {
+      headers: { "x-ktulu-gracz": "token-obcego" },
+    });
+    sprawdz(obcy.tresc.ja === null, "obcy klucz nie dostaje cudzej listy wspólników");
+
+    // Bez listy od prowadzącego pokój nie wymyśla jej sam.
+    await zapytaj(`/api/pokoj/${kod}/rozdaj`, {
+      method: "POST",
+      body: JSON.stringify({
+        przypisania: wszyscy.map((g) => ({ gracz: g.id, rola: "mieszczanin" })),
+      }),
+    });
+    const bezWspolnikow = await zapytaj(`/api/pokoj/${kod}/ja`, {
+      headers: { "x-ktulu-gracz": "token-kasi" },
+    });
+    sprawdz(
+      bezWspolnikow.tresc.ja?.wspolnicy?.length === 0,
+      "przy wyłączonej zasadzie karta nie zdradza nikogo"
+    );
+
+  }
+
+
 // — cudzy pokój —
 const obcy = await zapytaj("/api/test/sesja", {
   method: "POST",

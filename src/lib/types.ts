@@ -78,6 +78,8 @@ export interface Settings {
   disclosure: "jawny" | "tajny";
   /** Dla pozorów: nieaktywne role są wywoływane, ale nie wykonują akcji. */
   wakeInactiveForShow: boolean;
+  /** Czy bandyci i Indianie poznają swoich na własnej karcie na telefonie. */
+  wspolnicyNaKarcie: boolean;
 }
 
 export interface SetupConfig {

@@ -64,6 +64,8 @@ export interface StanGracza {
     /** Własna karta — wyłącznie po wydaniu i wyłącznie dla właściciela klucza. */
     rola: string | null;
     widzial: number | null;
+    /** Imiona wspólników z tej samej frakcji — puste, gdy zasada wyłączona. */
+    wspolnicy: string[];
   } | null;
   /** Imiona pozostałych — jawne i tak, bo wszyscy siedzą przy jednym stole. */
   imiona: string[];
@@ -129,6 +131,7 @@ interface WierszGracza extends Record<string, SqlStorageValue> {
   rola: string | null;
   widzial: number | null;
   ujawniony: number | null;
+  wspolnicy: string | null;
 }
 
 export class Pokoj extends DurableObject<Env> {
@@ -168,7 +171,8 @@ export class Pokoj extends DurableObject<Env> {
         miejsce INTEGER,
         rola TEXT,
         widzial INTEGER,
-        ujawniony INTEGER
+        ujawniony INTEGER,
+        wspolnicy TEXT
       );
       CREATE TABLE IF NOT EXISTS wspolprowadzacy (
         uzytkownik TEXT PRIMARY KEY,
@@ -214,7 +218,8 @@ export class Pokoj extends DurableObject<Env> {
           miejsce INTEGER,
           rola TEXT,
           widzial INTEGER,
-          ujawniony INTEGER
+          ujawniony INTEGER,
+          wspolnicy TEXT
         );
       `);
       return;
@@ -224,6 +229,7 @@ export class Pokoj extends DurableObject<Env> {
       ["rola", "TEXT"],
       ["widzial", "INTEGER"],
       ["ujawniony", "INTEGER"],
+      ["wspolnicy", "TEXT"],
     ] as const) {
       if (!kolumny.has(nazwa)) this.sql.exec(`ALTER TABLE gracze ADD COLUMN ${nazwa} ${typ}`);
     }
@@ -499,6 +505,11 @@ export class Pokoj extends DurableObject<Env> {
             // Karta wychodzi dopiero po wydaniu i tylko do właściciela klucza.
             rola: this.etap() === "rozdane" ? ja.rola : null,
             widzial: ja.widzial,
+            // Wspólnicy wychodzą razem z kartą i tylko do właściciela klucza.
+            wspolnicy:
+              this.etap() === "rozdane" && ja.wspolnicy
+                ? (JSON.parse(ja.wspolnicy) as string[])
+                : [],
           }
         : null,
       imiona: wszyscy.map((g) => g.nazwa),
@@ -578,19 +589,23 @@ export class Pokoj extends DurableObject<Env> {
    */
   async rozdaj(
     uzytkownik: string,
-    przypisania: { gracz: string; rola: string }[]
+    przypisania: { gracz: string; rola: string; wspolnicy?: string[] }[]
   ): Promise<Wynik<StanPokoju>> {
     if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
     if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
     if (przypisania.length === 0) return blad("Nie ma czego rozdawać.");
 
     const znani = new Set(this.gracze().map((g) => g.id));
-    for (const { gracz, rola } of przypisania) {
+    for (const { gracz, rola, wspolnicy } of przypisania) {
       if (!znani.has(gracz)) continue;
       if (typeof rola !== "string" || rola.length > 64) continue;
+      const lista = Array.isArray(wspolnicy)
+        ? wspolnicy.filter((x) => typeof x === "string").slice(0, 40)
+        : [];
       this.sql.exec(
-        "UPDATE gracze SET rola = ?, widzial = NULL, ujawniony = NULL WHERE id = ?",
+        "UPDATE gracze SET rola = ?, wspolnicy = ?, widzial = NULL, ujawniony = NULL WHERE id = ?",
         rola,
+        lista.length > 0 ? JSON.stringify(lista) : null,
         gracz
       );
     }
@@ -643,7 +658,7 @@ export class Pokoj extends DurableObject<Env> {
   async nowaRunda(uzytkownik: string): Promise<Wynik<StanPokoju>> {
     if (!this.zalozony()) return blad("Ten pokój nie istnieje.", 404);
     if (!this.czyWlasciciel(uzytkownik)) return blad("To nie jest twój pokój.", 403);
-    this.sql.exec("UPDATE gracze SET rola = NULL, widzial = NULL, ujawniony = NULL");
+    this.sql.exec("UPDATE gracze SET rola = NULL, wspolnicy = NULL, widzial = NULL, ujawniony = NULL");
     // Prośby dotyczyły zakończonej partii i po niej nie mają sensu.
     this.sql.exec("DELETE FROM zadania");
     this.ustaw("etap", "zamkniete");

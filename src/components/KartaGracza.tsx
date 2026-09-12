@@ -21,11 +21,14 @@ export default function KartaGracza({
   imie,
   potwierdzone,
   onPotwierdz,
+  wspolnicy = [],
 }: {
   roleId: string;
   imie: string;
   potwierdzone: boolean;
   onPotwierdz: () => void;
+  /** Imiona z tej samej frakcji — puste, gdy zasada domowa jest wyłączona. */
+  wspolnicy?: string[];
 }) {
   const [odsloniete, setOdsloniete] = useState(false);
   const rola = ROLE_BY_ID[roleId];
@@ -106,6 +109,25 @@ export default function KartaGracza({
         </div>
         <h2 className="text-[26px] font-bold leading-tight mt-1">{rola.name}</h2>
         <p className="text-[13.5px] leading-relaxed mt-3 text-[var(--text)]">{rola.desc}</p>
+        {wspolnicy.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-[var(--border)]">
+            <div className="label-xs mb-1.5" style={{ color: kolor }}>
+              {wspolnicy.length === 1 ? "Twój wspólnik" : "Twoi wspólnicy"}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {wspolnicy.map((n) => (
+                <span
+                  key={n}
+                  className="text-[13.5px] font-medium px-2 py-1 rounded-[6px]"
+                  style={{ background: "var(--surface-2)" }}
+                >
+                  {n}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mt-4 pt-3 border-t border-[var(--border)]">
           <div className="text-[12.5px] text-[var(--text-dim)] leading-relaxed">
             <strong className="text-[var(--text)]">Cel:</strong> {FACTION_GOAL[rola.faction]}
