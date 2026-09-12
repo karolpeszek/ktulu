@@ -31,17 +31,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="app-header ui-header h-12 shrink-0 sticky top-0 z-30 bg-[var(--surface)] border-b border-[var(--border)] flex items-center px-4 gap-6">
+      {/* Na telefonie same zakładki są szersze niż ekran, więc nawigacja
+          przewija się w poziomie, a wszystko poza nią nie może się kurczyć.
+          Dopisek przy nazwie i odznaki stanu znikają, bo są najmniej potrzebne
+          z tego, co tu stoi. */}
+      <header className="app-header ui-header h-12 shrink-0 sticky top-0 z-30 bg-[var(--surface)] border-b border-[var(--border)] flex items-center px-3 sm:px-4 gap-3 sm:gap-6">
         <Link href="/manitou" className="flex items-center gap-2 shrink-0">
           <span className="w-5 h-5 rounded-[5px] bg-[var(--accent)] grid place-items-center text-[11px] font-bold text-[var(--accent-text)]">
             K
           </span>
-          <span className="text-[13px] font-semibold tracking-tight">
-            Ktulu <span className="text-[var(--text-faint)] font-normal">· pulpit Manitou</span>
+          <span className="text-[13px] font-semibold tracking-tight hidden min-[420px]:inline">
+            Ktulu{" "}
+            <span className="text-[var(--text-faint)] font-normal hidden lg:inline">
+              · pulpit Manitou
+            </span>
           </span>
         </Link>
 
-        <nav className="flex items-center gap-0.5 h-full">
+        <nav className="pasek-zakladek flex items-center gap-0.5 h-full flex-1 min-w-0 overflow-x-auto">
           {NAV.map((n) => {
             const active = path === n.href;
             return (
@@ -49,7 +56,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 key={n.href}
                 href={n.href}
                 className={cx(
-                  "ui-navlink h-full px-3 flex items-center text-[13px] border-b-2 transition-colors",
+                  "ui-navlink h-full px-3 flex items-center text-[13px] border-b-2 transition-colors shrink-0",
                   active
                     ? "border-[var(--accent)] text-[var(--text)] font-medium"
                     : "border-transparent text-[var(--text-dim)] hover:text-[var(--text)]"
@@ -61,7 +68,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-2">
           {uzytkownik ? (
             <Link
               href="/manitou/ustawienia"
@@ -82,7 +89,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           )}
           {loaded && state.players.length > 0 && (
-            <>
+            <div className="hidden md:flex items-center gap-2">
               <Badge>{`${state.players.filter((p) => p.alive).length} żywych`}</Badge>
               <Badge
                 color={
@@ -95,7 +102,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               >
                 {phase}
               </Badge>
-            </>
+            </div>
           )}
         </div>
       </header>

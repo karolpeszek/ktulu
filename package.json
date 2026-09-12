@@ -17,7 +17,8 @@
     "typecheck": "tsc --noEmit",
     "typecheck:worker": "tsc --noEmit -p worker/tsconfig.json",
     "verify": "node scripts/gen-bootstrap.mjs && pnpm run lint && pnpm run typecheck && pnpm run typecheck:worker && pnpm run test",
-    "build:only": "node scripts/gen-bootstrap.mjs --force && next build && node scripts/gen-sw.mjs"
+    "build:only": "node scripts/gen-bootstrap.mjs --force && next build && node scripts/gen-sw.mjs",
+    "audyt:mobilny": "node --import tsx scripts/audyt-mobilny.mjs"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^14.0.0",

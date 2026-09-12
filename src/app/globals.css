@@ -246,10 +246,31 @@ body {
   padding: 8mm;
 }
 
+/*
+ * Podgląd wydruku na ekranie.
+ *
+ * Karta ma fizyczne 90 mm, bo taka wychodzi z drukarki — i na telefonie nie
+ * mieści się w szerokości. Zamiast ją zmniejszać (co kłamałoby o wyniku
+ * wydruku), pozwalamy przesunąć arkusz w bok. Reguła dotyczy tylko ekranu,
+ * więc sam wydruk zostaje nietknięty.
+ */
+@media screen {
+  .print-sheet {
+    overflow-x: auto;
+  }
+
+}
+
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(2, 90mm);
-  justify-content: center;
+  /*
+   * `safe` znaczy „wyśrodkuj, o ile to nie odetnie początku”. Samo `center`
+   * w kontenerze węższym niż zawartość rozkłada nadmiar na obie strony,
+   * a do lewej nie da się już przewinąć — na telefonie znikałaby cała
+   * pierwsza kolumna karteczek.
+   */
+  justify-content: safe center;
 }
 
 .cut-card {
@@ -506,4 +527,25 @@ body {
 :root[data-density="touch"] select {
   min-height: 40px;
   font-size: 14px;
+}
+
+
+/*
+ * Pasek zakładek pulpitu przewija się w poziomie na wąskim ekranie.
+ * Suwak jest tu zbędny — zakładki widać, a przewija się je palcem — i zabierałby
+ * wysokość paskowi, który ma tylko 48 pikseli.
+ */
+.pasek-zakladek {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* Przewijanie w poziomie ma się zatrzymywać na zakładce, nie w pół słowa. */
+  scroll-snap-type: x proximity;
+}
+
+.pasek-zakladek::-webkit-scrollbar {
+  display: none;
+}
+
+.pasek-zakladek > * {
+  scroll-snap-align: start;
 }

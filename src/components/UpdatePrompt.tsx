@@ -74,7 +74,9 @@ export default function UpdatePrompt() {
   if (!waiting && !offlineReady) return null;
 
   return (
-    <div className="no-print fixed bottom-4 right-4 z-50 max-w-[360px] anim-fade-up">
+    // Na wąskim ekranie 360 pikseli szerokości plus odstęp od krawędzi nie
+    // mieści się w oknie, więc zamiast stałej szerokości trzymamy oba boki.
+    <div className="no-print fixed bottom-4 left-4 right-4 sm:left-auto z-50 sm:max-w-[360px] anim-fade-up">
       <div className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] shadow-lg px-4 py-3">
         {waiting ? (
           <>
