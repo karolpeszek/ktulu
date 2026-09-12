@@ -37,7 +37,7 @@ import FactionDonut from "@/components/FactionDonut";
 import KartaLobby from "@/components/KartaLobby";
 import SeatArc, { SeatLegend } from "@/components/SeatArc";
 import { useKonto } from "@/lib/konto";
-import { GraczWPokoju, usePokoj } from "@/lib/pokoj";
+import { GraczWPokoju, usePokojCtx } from "@/lib/pokoj";
 
 let idSeq = 0;
 const newId = () => `p${Date.now().toString(36)}${idSeq++}`;
@@ -95,7 +95,7 @@ export default function SetupPage() {
   const players = state.players;
   const withJanosik = state.setup.withJanosik;
   const { trybOnline } = useKonto();
-  const pokoj = usePokoj(trybOnline);
+  const pokoj = usePokojCtx();
 
   const janosikOk = janosikAllowed(players.length);
   const counts = state.setup.manualCounts

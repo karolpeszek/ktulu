@@ -6,7 +6,7 @@ import { emptyState } from "./engine";
 
 const KEY = "ktulu.game.v1";
 
-interface Ctx {
+export interface Ctx {
   state: GameState;
   set: (s: GameState) => void;
   update: (fn: (s: GameState) => void) => void;
@@ -14,7 +14,12 @@ interface Ctx {
   loaded: boolean;
 }
 
-const GameCtx = createContext<Ctx | null>(null);
+/**
+ * Wystawiony na zewnątrz, bo asysta podstawia własną implementację: ten sam
+ * kształt, ale zapis zamienia się w prośbę do głównego prowadzącego. Panele
+ * rozgrywki nie muszą wtedy wiedzieć, na czyim urządzeniu działają.
+ */
+export const GameCtx = createContext<Ctx | null>(null);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GameState>(() => emptyState());

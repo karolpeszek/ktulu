@@ -9,7 +9,7 @@
  */
 
 import { useState } from "react";
-import type { Pokoj, GraczWPokoju } from "@/lib/pokoj";
+import type { Pokoj, GraczWPokoju, PoziomAsysty } from "@/lib/pokoj";
 import { Badge, Button, Card, Empty, cx, inputCls } from "./ui";
 import EkranKodu from "./EkranKodu";
 
@@ -35,6 +35,7 @@ export default function KartaLobby({
   onPosadz: (gracz: GraczWPokoju) => void;
 }) {
   const [pelnyEkran, setPelnyEkran] = useState(false);
+  const [nowyKodAsysty, setNowyKodAsysty] = useState<string | null>(null);
   const [zmieniany, setZmieniany] = useState<string | null>(null);
   const [nowaNazwa, setNowaNazwa] = useState("");
 
@@ -254,7 +255,113 @@ export default function KartaLobby({
         </div>
       </Card>
 
+      <SekcjaAsysty
+        pokoj={pokoj}
+        kodPokoju={stan.kod}
+        nowyKod={nowyKodAsysty}
+        setNowyKod={setNowyKodAsysty}
+      />
+
       {pelnyEkran && <EkranKodu kod={stan.kod} zamknij={() => setPelnyEkran(false)} />}
     </>
+  );
+}
+
+
+/**
+ * Zapraszanie drugiego prowadzącego.
+ *
+ * Osobna karta, bo to zupełnie inna rzecz niż wpuszczanie graczy: kod z tej
+ * karty daje wgląd we wszystkie karty w grze. Dlatego ma własny format i nie
+ * pokazuje się obok kodu, który idzie na stół.
+ */
+function SekcjaAsysty({
+  pokoj,
+  kodPokoju,
+  nowyKod,
+  setNowyKod,
+}: {
+  pokoj: Pokoj;
+  kodPokoju: string;
+  nowyKod: string | null;
+  setNowyKod: (k: string | null) => void;
+}) {
+  const stan = pokoj.stan;
+  if (!stan) return null;
+
+  const czekajace = stan.zaproszeniaAsysty.filter((z) => !z.zuzytePrzez);
+  const link =
+    nowyKod && typeof window !== "undefined"
+      ? `${location.origin}/manitou/asysta/?p=${kodPokoju}&z=${nowyKod}`
+      : null;
+
+  const wystaw = async (poziom: PoziomAsysty) => {
+    setNowyKod(await pokoj.zaproszenieAsysty(poziom));
+  };
+
+  return (
+    <Card title="Drugi prowadzący">
+      <p className="text-[12.5px] text-[var(--text-dim)] leading-relaxed">
+        Zaproszenie daje wgląd we wszystkie karty, więc jest osobne od kodu gry i wymaga konta.
+        Przy prawie zapisu każda zmiana asysty czeka na twoją zgodę tutaj.
+      </p>
+
+      <div className="mt-3 flex items-center gap-2 flex-wrap">
+        <Button size="sm" variant="primary" onClick={() => void wystaw("zapis")}>
+          Zaproś do pomocy
+        </Button>
+        <Button size="sm" onClick={() => void wystaw("odczyt")}>
+          Zaproś do podglądu
+        </Button>
+      </div>
+
+      {nowyKod && (
+        <div className="mt-3 p-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)]">
+          <div className="label-xs mb-1">Kod zaproszenia — jednorazowy</div>
+          <code className="font-mono tracking-[0.15em] text-[18px] font-semibold">{nowyKod}</code>
+          {link && (
+            <div className="mt-2">
+              <Button
+                size="sm"
+                onClick={() => void navigator.clipboard?.writeText(link).catch(() => {})}
+              >
+                Skopiuj gotowy link
+              </Button>
+              <p className="mt-1.5 text-[11.5px] text-[var(--text-faint)] break-all">{link}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {stan.wspolprowadzacy.length > 0 && (
+        <div className="mt-4">
+          <div className="label-xs mb-1.5">Pomagają ci</div>
+          <div className="flex flex-col gap-1">
+            {stan.wspolprowadzacy.map((w) => (
+              <div key={w.uzytkownik} className="ui-row flex items-center gap-2">
+                <span className="text-[13px] font-medium">{w.nazwa}</span>
+                <Badge color={w.poziom === "zapis" ? "var(--accent)" : undefined}>
+                  {w.poziom === "zapis" ? "zmiany za zgodą" : "tylko podgląd"}
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-auto"
+                  onClick={() => void pokoj.odbierzAsyste(w.uzytkownik)}
+                >
+                  Odbierz dostęp
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {czekajace.length > 0 && (
+        <p className="mt-3 text-[12px] text-[var(--text-faint)]">
+          Niewykorzystane zaproszenia: {czekajace.length}. Każde działa raz i wygasa razem z grą.
+        </p>
+      )}
+    </Card>
   );
 }
