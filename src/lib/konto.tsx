@@ -37,7 +37,13 @@ interface Ctx {
    */
   trybLokalny: boolean;
   ustawTrybLokalny: (v: boolean) => void;
-  /** Czy korzystamy z funkcji sieciowych. Bez konta jest to niemożliwe. */
+  /**
+   * Czy funkcje sieciowe są w ogóle dostępne — czyli czy jest konto.
+   *
+   * Nie ma osobnego przełącznika: lobby pokazuje się zawsze, a bez konta jego
+   * przyciski są po prostu nieczynne i mówią dlaczego. Przełącznik, który
+   * trzeba znaleźć i kliknąć, żeby cokolwiek zadziałało, tylko mylił.
+   */
   trybOnline: boolean;
   /** Prawda, dopóki nie istnieje ani jedno konto — trwa tryb bootstrapowy. */
   pusto: boolean;
@@ -217,7 +223,7 @@ export function KontoProvider({ children }: { children: React.ReactNode }) {
         powodNiedostepnosci,
         trybLokalny,
         ustawTrybLokalny,
-        trybOnline: !!uzytkownik && !trybLokalny,
+        trybOnline: !!uzytkownik,
         odswiez,
         zaloguj,
         zarejestruj,

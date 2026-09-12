@@ -9,7 +9,9 @@
  */
 
 import { useState } from "react";
+import Link from "next/link";
 import type { Pokoj, GraczWPokoju, PoziomAsysty } from "@/lib/pokoj";
+import { useKonto } from "@/lib/konto";
 import { Badge, Button, Card, Empty, cx, inputCls } from "./ui";
 import EkranKodu from "./EkranKodu";
 
@@ -42,22 +44,7 @@ export default function KartaLobby({
   const stan = pokoj.stan;
 
   if (!stan) {
-    return (
-      <Card title="Lobby">
-        <p className="text-[12.5px] text-[var(--text-dim)] leading-relaxed">
-          Utwórz pokój, a gracze dołączą kodem ze swoich telefonów. Imiona wpiszą sami, ty tylko
-          sadzasz ich w kolejności przy stole.
-        </p>
-        {pokoj.blad && (
-          <p className="text-[12.5px] mt-2" style={{ color: "var(--danger)" }}>
-            {pokoj.blad}
-          </p>
-        )}
-        <Button variant="primary" className="mt-3" onClick={() => void pokoj.zaloz()}>
-          Utwórz pokój
-        </Button>
-      </Card>
-    );
+    return <LobbyBezPokoju pokoj={pokoj} />;
   }
 
   const pula = stan.gracze.filter((g) => !posadzeni.includes(g.id));
@@ -267,6 +254,67 @@ export default function KartaLobby({
   );
 }
 
+
+/**
+ * Lobby, zanim powstanie pokój.
+ *
+ * Karta jest widoczna zawsze, również bez konta — inaczej trzeba by wiedzieć
+ * o istnieniu tej funkcji, żeby ją znaleźć. Gdy założenie pokoju jest
+ * niemożliwe, przycisk jest nieczynny i pod spodem stoi powód.
+ */
+function LobbyBezPokoju({ pokoj }: { pokoj: Pokoj }) {
+  const { uzytkownik, polaczenie, powodNiedostepnosci } = useKonto();
+
+  const przeszkoda =
+    polaczenie === "sprawdzanie"
+      ? "Sprawdzanie konta…"
+      : polaczenie === "niedostepny"
+        ? `Serwer nie jest poprawnie skonfigurowany: ${powodNiedostepnosci}`
+        : polaczenie === "offline"
+          ? "Brak połączenia z serwerem. Grę prowadzisz normalnie, tylko bez telefonów graczy."
+          : !uzytkownik
+            ? "Wymaga zalogowania — pokój jest przypisany do twojego konta."
+            : null;
+
+  return (
+    <Card title="Lobby">
+      <p className="text-[12.5px] text-[var(--text-dim)] leading-relaxed">
+        Utwórz pokój, a gracze dołączą kodem ze swoich telefonów. Imiona wpiszą sami, ty tylko
+        sadzasz ich w kolejności przy stole. Karty rozdasz potem prosto na ich urządzenia.
+      </p>
+
+      <Button
+        variant="primary"
+        className="mt-3"
+        disabled={!!przeszkoda}
+        onClick={() => void pokoj.zaloz()}
+      >
+        Utwórz pokój
+      </Button>
+
+      {przeszkoda && (
+        <p className="mt-2 text-[12px] text-[var(--text-faint)] leading-relaxed">
+          {przeszkoda}
+          {!uzytkownik && polaczenie === "online" && (
+            <>
+              {" "}
+              <Link href="/manitou/logowanie" className="text-[var(--accent)] underline">
+                Zaloguj się
+              </Link>
+              .
+            </>
+          )}
+        </p>
+      )}
+
+      {pokoj.blad && (
+        <p className="text-[12.5px] mt-2" style={{ color: "var(--danger)" }}>
+          {pokoj.blad}
+        </p>
+      )}
+    </Card>
+  );
+}
 
 /**
  * Zapraszanie drugiego prowadzącego.
